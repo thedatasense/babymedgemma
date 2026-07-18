@@ -1,0 +1,28 @@
+{
+  "layer": 1,
+  "sae_dict": 2048,
+  "topk": 16,
+  "var_explained": 0.9990095496177673,
+  "n_examples": 1323,
+  "n_flip_clusters": 20,
+  "sae_feature_max_cos_with_E_dir": {
+    "feature": 1666,
+    "cos": -0.5119215250015259,
+    "flip_pointbiserial": 0.24404212318081622
+  },
+  "sae_feature_max_flip_pb": {
+    "feature": 250,
+    "pb": 0.37278793883475186,
+    "cos_with_E_dir": -0.2849612832069397
+  },
+  "pca_top20_max_cos_with_E_dir": 0.4779016077518463,
+  "random_dir_mean_cos_with_E_dir": 0.03800263657929666,
+  "register_selectivity_of_top_flip_feature": {
+    "original": 1.690976858139038,
+    "lexical_substitution": 1.911552906036377,
+    "scope_quantification": 1.6241639852523804,
+    "syntactic_restructuring": 1.809461236000061,
+    "negation_pattern": 1.2233800888061523,
+    "specificity_modulation": 1.4349749088287354
+  }
+}
