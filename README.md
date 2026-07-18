@@ -54,19 +54,32 @@ construction.** The probe reaches 88.8% accuracy and, like MedGemma, is
 text-reliant (75% of answers unchanged when the image is removed, close to the
 deployed model's 81%), so it is faithful in behavior as well as architecture.
 
-## Headline results (16 seeds, `results_gemma/`)
+## Results (16 seeds, `results_gemma/`)
 
-| Experiment | Finding |
-|---|---|
-| **B — data provenance** | The training-phrasing distribution sets the flip rate: augmented 8.4% vs canonical 30.3% vs adversarial 30.4%. Augmented separates from both narrow regimes at Mann-Whitney U p = 1.4e-6, Cliff's delta = 1.00. |
-| **E — causal patching** | The flip is a low-rank readout direction: a rank-1 difference-direction patch restores flips with net recovery near 1.0 at layers 0-1, while random-direction and non-flip controls stay at 0. Holds for natural flips, not only injected ones. |
-| **A — divergence** | Representation dispersion couples to flips from the earliest layers; lexical substitution drives the most naturally occurring flips. |
-| **C — architecture** | Depth is not the driver (flip 7.6-9.4% across decoder depths 2/4/6/8). |
-| **D — grounding sweep** | Non-monotonic and inconclusive; no weak-grounding claim is drawn from it. |
+Five experiments, **A to E**, isolate the origin (A establishes the cause; B and C
+localize and confirm the mechanism; D and E rule out the two obvious
+alternatives). Full read: [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md).
+
+| | Experiment | Result |
+|---|---|---|
+| **A** | Data provenance | The training-phrasing distribution sets the flip rate: augmented **8.4%** vs canonical **30.3%** vs adversarial 30.4% (augmented vs each narrow regime: Mann-Whitney U p = 1.4e-6, Cliff's delta = 1.00). Augmentation is the lever. |
+| **B** | Divergence | Representation dispersion couples to flips from the earliest layers; lexical substitution drives the most natural flips. |
+| **C** | Causal patching | The flip is a low-rank readout direction: a rank-1 patch restores flips with net recovery ~1.0 at layers 0-1, controls at 0, for natural flips not only injected ones. |
+| **D** | Architecture | Depth is not the driver (flip 7.6-9.4% across depths 2/4/6/8). |
+| **E** | Grounding | Non-monotonic, inconclusive. |
+
+**Corroboration.** An unsupervised SAE feature aligns with the causal flip
+direction (|cos| 0.51, vs PCA 0.48, vs random 0.04); a Jacobian lens shows
+flipping clusters diverge ~9.5x more than stable ones from layer 0 (correlation
+0.71) — a second method agreeing with the causal patch.
+
+**Zero-shot transfer.** On 2,227 unseen NIH ChestX-ray14 radiographs, the
+paraphrase-sensitivity mechanism still appears (flip rate 0.111, lens divergence
+ratio ~2x) even though competence does not (chance accuracy).
 
 **The origin is the training-phrasing distribution; the fix is paraphrase
-augmentation** (a flip rate of 30.3% under a single phrasing falls to 8.4% under
-full coverage), and a targeted low-rank edit at the early layers.
+augmentation** (30.3% down to 8.4%), and a targeted low-rank edit at the early
+layers.
 
 ## Layout
 
