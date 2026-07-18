@@ -131,17 +131,31 @@ weak-grounding claim is drawn from it.
 
 Two independent methods that make different assumptions agree with C.
 
-**A sparse autoencoder (`sae.py`).** An unsupervised feature aligns with the
-causal flip direction from C at |cosine| 0.51, edging out PCA's 0.48 and far above
-a random direction's 0.04; a distinct feature predicts flips (point-biserial
-0.37). So the flip axis is unsupervised-recoverable, not an artifact of the
-supervised difference-of-means, though it is not a single sharp gate.
+**A sparse autoencoder (`sae.py`).** A sparse autoencoder factors the residual
+stream at the answer position into a few active features, each a direction; we ask
+whether any feature's direction matches the causal flip direction from C.
 
-**A Jacobian lens (`jlens.py`).** Reading the per-layer yes/no margin through the
-average input-output Jacobian, flipping clusters diverge about **9.5x** more than
-stable ones, from layer 0, with a divergence-vs-flip correlation of **0.71**. A
-lens and a causal patch, with different assumptions, place the flip in the same
-early layers.
+![What the sparse autoencoder tests](../figures/sae_concept.png)
+
+An unsupervised feature aligns with the causal flip direction at |cosine| 0.51,
+edging out PCA's 0.48 and far above a random direction's 0.04; a distinct feature
+predicts flips (point-biserial 0.37). So the flip axis is unsupervised-recoverable,
+not an artifact of the supervised difference-of-means, though it is not a single
+sharp gate.
+
+![An unsupervised feature recovers the causal flip axis](../figures/sae_alignment.png)
+
+**A Jacobian lens (`jlens.py`).** The lens reads the yes/no margin each layer is
+disposed to produce (the average input-output Jacobian). For two phrasings of one
+question the readouts track together early, then commit to opposite answers.
+
+![What the Jacobian lens shows](../figures/jlens_concept.png)
+
+Across paraphrases, flipping clusters diverge about **9.5x** more than stable ones,
+from layer 0, with a divergence-vs-flip correlation of **0.71**. A lens and a
+causal patch, with different assumptions, place the flip in the same early layers.
+
+![The lens splits flipping from stable paraphrases](../figures/jlens_divergence.png)
 
 ## Extension: zero-shot transfer to NIH (`nih_demo.py`)
 
@@ -161,6 +175,8 @@ from stable ones. The model's *competence* does not (chance accuracy on NIH), so
 these are flips of an out-of-distribution model, which is why the signal is
 weaker. Paraphrase sensitivity is a property of how the model reads the wording,
 so it shows up even when the model is out of its depth on the images.
+
+![Zero-shot transfer to NIH ChestX-ray14](../figures/nih_transfer.png)
 
 ---
 

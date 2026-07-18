@@ -73,6 +73,12 @@ direction (|cos| 0.51, vs PCA 0.48, vs random 0.04); a Jacobian lens shows
 flipping clusters diverge ~9.5x more than stable ones from layer 0 (correlation
 0.71) — a second method agreeing with the causal patch.
 
+![The lens splits flipping from stable paraphrases, from the first layer](figures/jlens_divergence.png)
+
+Figures explaining and showing the SAE, the lens, and the NIH transfer are in
+[`figures/`](figures/) (regenerate with `python figures.py`) and rendered inline
+in [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md).
+
 **Zero-shot transfer.** On 2,227 unseen NIH ChestX-ray14 radiographs, the
 paraphrase-sensitivity mechanism still appears (flip rate 0.111, lens divergence
 ratio ~2x) even though competence does not (chance accuracy).
