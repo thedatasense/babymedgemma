@@ -153,8 +153,8 @@ def register_selectivity(Z, meta, feature):
     return {ph: float(np.mean(v)) for ph, v in by_ph.items()}
 
 
-def run(layer, out, seed=0, m=2048, k=16):
-    art = train_model(regime="augmented", seed=seed)
+def run(layer, out, seed=0, m=2048, k=16, arch="nano"):
+    art = train_model(regime="augmented", seed=seed, arch=arch)
     model, ds, device = art["model"], art["eval_ds"], art["device"]
     print(f"[sae] model acc={art['result']['accuracy']:.3f} flip={art['result']['flip_rate']:.3f}")
 
@@ -219,8 +219,9 @@ def main():
     ap.add_argument("--dict", type=int, default=2048)
     ap.add_argument("--topk", type=int, default=16)
     ap.add_argument("--out", default="results/sae")
+    ap.add_argument("--arch", default="nano", choices=["nano", "gemma"])
     a = ap.parse_args()
-    run(a.layer, a.out, seed=a.seed, m=a.dict, k=a.topk)
+    run(a.layer, a.out, seed=a.seed, m=a.dict, k=a.topk, arch=a.arch)
 
 
 if __name__ == "__main__":
