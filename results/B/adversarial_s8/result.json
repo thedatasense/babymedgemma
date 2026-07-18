@@ -1,0 +1,16 @@
+{
+  "regime": "adversarial",
+  "seed": 8,
+  "steps": 1500,
+  "depth": 6,
+  "early_stop_step": 300,
+  "val_acc": 0.8878923766816144,
+  "vision_dropout": 0.0,
+  "n_train": 1172,
+  "n_eval_clusters": 231,
+  "trainable_params": 11486210,
+  "accuracy": 0.8314436885865457,
+  "accuracy_vision_ablated": 0.7551020408163265,
+  "grounding_gap": 0.07634164777021923,
+  "flip_rate": 0.29004329004329005
+}

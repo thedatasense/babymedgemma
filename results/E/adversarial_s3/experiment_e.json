@@ -1,0 +1,51 @@
+{
+  "regime": "adversarial",
+  "seed": 3,
+  "steps": 1500,
+  "depth": 6,
+  "early_stop_step": 450,
+  "val_acc": 0.8968609865470852,
+  "vision_dropout": 0.0,
+  "n_train": 1172,
+  "n_eval_clusters": 231,
+  "trainable_params": 11486210,
+  "accuracy": 0.8291761148904006,
+  "accuracy_vision_ablated": 0.6689342403628118,
+  "grounding_gap": 0.16024187452758876,
+  "flip_rate": 0.33766233766233766,
+  "n_flip_targets": 60,
+  "n_nonflip_controls": 60,
+  "recovery_rank1_by_layer": [
+    0.75,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "control_rank1_by_layer": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "net_rank1_by_layer": [
+    0.75,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "nonflip_disruption_by_layer": [
+    0.016666666666666666,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "locus_depth_net30": 0
+}

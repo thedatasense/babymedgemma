@@ -1,0 +1,14 @@
+# Heavy artifacts live on Hugging Face (saillab/babymedgemma), not in git
+cache/                 # MedSigLIP feature cache (~3 GB)
+**/model.pt            # per-run checkpoints (~10 GB)
+
+# Logs and Python cruft
+*.log
+**/log.txt
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+
+# Local data index variants (regenerable)
+data/index_10k.json*

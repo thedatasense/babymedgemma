@@ -1,0 +1,16 @@
+{
+  "regime": "canonical",
+  "seed": 15,
+  "steps": 1500,
+  "depth": 6,
+  "early_stop_step": 375,
+  "val_acc": 0.9237668161434978,
+  "vision_dropout": 0.0,
+  "n_train": 1172,
+  "n_eval_clusters": 231,
+  "trainable_params": 11486210,
+  "accuracy": 0.7596371882086168,
+  "accuracy_vision_ablated": 0.29327286470143615,
+  "grounding_gap": 0.46636432350718066,
+  "flip_rate": 0.5714285714285714
+}

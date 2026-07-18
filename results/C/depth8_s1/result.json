@@ -1,0 +1,16 @@
+{
+  "regime": "augmented",
+  "seed": 1,
+  "steps": 1500,
+  "depth": 8,
+  "early_stop_step": 225,
+  "val_acc": 0.8654708520179372,
+  "vision_dropout": 0.0,
+  "n_train": 6862,
+  "n_eval_clusters": 231,
+  "trainable_params": 15035138,
+  "accuracy": 0.8427815570672713,
+  "accuracy_vision_ablated": 0.6810279667422524,
+  "grounding_gap": 0.1617535903250189,
+  "flip_rate": 0.07792207792207792
+}

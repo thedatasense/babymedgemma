@@ -1,0 +1,33 @@
+{
+  "regime": "adversarial",
+  "seed": 6,
+  "steps": 1500,
+  "depth": 6,
+  "early_stop_step": 225,
+  "val_acc": 0.8834080717488789,
+  "vision_dropout": 0.0,
+  "n_train": 1172,
+  "n_eval_clusters": 231,
+  "trainable_params": 11486210,
+  "accuracy": 0.8435374149659864,
+  "accuracy_vision_ablated": 0.6681783824640968,
+  "grounding_gap": 0.17535903250188967,
+  "flip_rate": 0.31601731601731603,
+  "per_layer_dispersion_flip_corr": {
+    "0": -0.26930428155331027,
+    "1": 0.8407130314809937,
+    "2": 0.8619200757161597,
+    "3": 0.8422778368932656,
+    "4": 0.8135378345391759,
+    "5": 0.7736098170510237
+  },
+  "flip_fraction": 0.31601731601731603,
+  "phenomenon_disagreement": {
+    "original": 0.06926406926406926,
+    "lexical_substitution": 0.11673151750972763,
+    "scope_quantification": 0.17699115044247787,
+    "syntactic_restructuring": 0.08482142857142858,
+    "negation_pattern": 0.125,
+    "specificity_modulation": 0.029850746268656716
+  }
+}

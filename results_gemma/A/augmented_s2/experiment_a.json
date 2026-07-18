@@ -1,0 +1,33 @@
+{
+  "regime": "augmented",
+  "seed": 2,
+  "steps": 2000,
+  "depth": 6,
+  "early_stop_step": 150,
+  "val_acc": 0.9103139013452914,
+  "vision_dropout": 0.0,
+  "n_train": 6862,
+  "n_eval_clusters": 231,
+  "trainable_params": 13861634,
+  "accuracy": 0.8866213151927438,
+  "accuracy_vision_ablated": 0.5888133030990174,
+  "grounding_gap": 0.2978080120937264,
+  "flip_rate": 0.09956709956709957,
+  "per_layer_dispersion_flip_corr": {
+    "0": 0.614071026087651,
+    "1": 0.5672076637848473,
+    "2": 0.4935637476726825,
+    "3": 0.44673049948901133,
+    "4": 0.4320660472179508,
+    "5": 0.4306019571456974
+  },
+  "flip_fraction": 0.09956709956709957,
+  "phenomenon_disagreement": {
+    "original": 0.03463203463203463,
+    "lexical_substitution": 0.05058365758754864,
+    "scope_quantification": 0.01327433628318584,
+    "syntactic_restructuring": 0.008928571428571428,
+    "negation_pattern": 0.010869565217391304,
+    "specificity_modulation": 0.01990049751243781
+  }
+}
