@@ -11,9 +11,19 @@ training-phrasing distribution one factor at a time.**
 - Weights and feature cache: **[huggingface.co/saillab/babymedgemma](https://huggingface.co/saillab/babymedgemma)**
 - Interactive write-up: **[bineshkumar.me/phd-thesis/causality](https://bineshkumar.me/phd-thesis/causality/)**
 - Design document: [`docs/tiny_vlm_psf_isolation.md`](docs/tiny_vlm_psf_isolation.md)
+- **What the experiments prove (a plain read):** [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md)
 
 Companion to the PhD dissertation *Paraphrase Sensitivity in Medical
 Vision-Language Models* (Thrust 3, mechanism and mitigation).
+
+> **Scope.** This is a controlled research probe, **not a general medical VQA
+> model**. It has a small domain-specific vocabulary (733 words from the
+> chest-X-ray presence questions) and grounds weakly, so it is loadable and
+> runnable for inspection and reproduction only. It supports a *sufficiency*
+> claim about the cause of paraphrase sensitivity, not proof that the deployed
+> MedGemma-4B has this exact origin. Not a medical device; not for clinical use.
+> See [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md) for exactly what the
+> experiments do and do not establish.
 
 ## Why this exists
 
