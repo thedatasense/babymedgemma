@@ -81,6 +81,27 @@ The model checkpoints (`**/model.pt`, ~4 GB) and the MedSigLIP feature cache
 (`cache/medsiglip_feats.pt`, ~3 GB) are on Hugging Face, not in git:
 **[saillab/babymedgemma](https://huggingface.co/saillab/babymedgemma)**.
 
+## Load with transformers
+
+The trained probe is packaged as a custom `transformers` model (loadable via
+`trust_remote_code`); `modeling_babymedgemma.py` holds the config and model
+classes.
+
+```python
+import torch
+from transformers import AutoModel
+
+model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
+input_ids, ans_pos = model.encode_question("is there cardiomegaly ?")
+from PIL import Image
+vision_features = model.encode_images([Image.open("cxr.png").convert("RGB")])  # frozen MedSigLIP
+logits = model(input_ids=input_ids, vision_features=vision_features, ans_pos=ans_pos).logits
+print(model.config.id2label[int(logits.argmax(-1))])   # "yes" or "no"
+```
+
+The bundled weights are the augmented seed-0 checkpoint; every other checkpoint
+under HF `checkpoints/` is a `state_dict` for `BabyGemmaVLM` in `gemma_model.py`.
+
 ## Reproduce
 
 ```bash
