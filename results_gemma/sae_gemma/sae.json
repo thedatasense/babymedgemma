@@ -2,27 +2,27 @@
   "layer": 1,
   "sae_dict": 2048,
   "topk": 16,
-  "var_explained": 0.9990095496177673,
+  "var_explained": 0.9987319707870483,
   "n_examples": 1323,
-  "n_flip_clusters": 20,
+  "n_flip_clusters": 26,
   "sae_feature_max_cos_with_E_dir": {
-    "feature": 1666,
-    "cos": -0.5119215250015259,
-    "flip_pointbiserial": 0.24404212318081622
+    "feature": 13,
+    "cos": -0.7370408773422241,
+    "flip_pointbiserial": 0.42207317384122156
   },
   "sae_feature_max_flip_pb": {
-    "feature": 250,
-    "pb": 0.37278793883475186,
-    "cos_with_E_dir": -0.2849612832069397
+    "feature": 439,
+    "pb": 0.4327838936496529,
+    "cos_with_E_dir": 0.15489038825035095
   },
-  "pca_top20_max_cos_with_E_dir": 0.4779016077518463,
-  "random_dir_mean_cos_with_E_dir": 0.03800263657929666,
+  "pca_top20_max_cos_with_E_dir": 0.5193287134170532,
+  "random_dir_mean_cos_with_E_dir": 0.04276863217013796,
   "register_selectivity_of_top_flip_feature": {
-    "original": 1.690976858139038,
-    "lexical_substitution": 1.911552906036377,
-    "scope_quantification": 1.6241639852523804,
-    "syntactic_restructuring": 1.809461236000061,
-    "negation_pattern": 1.2233800888061523,
-    "specificity_modulation": 1.4349749088287354
+    "original": 0.023720625787973404,
+    "lexical_substitution": 0.07094349712133408,
+    "scope_quantification": 0.06112198159098625,
+    "syntactic_restructuring": 0.04304799437522888,
+    "negation_pattern": 0.02968856506049633,
+    "specificity_modulation": 0.01291138306260109
   }
 }

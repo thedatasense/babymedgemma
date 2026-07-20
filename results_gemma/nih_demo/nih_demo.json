@@ -1,0 +1,54 @@
+{
+  "arch": "gemma",
+  "findings": [
+    "Cardiomegaly",
+    "Pneumothorax",
+    "Effusion",
+    "Atelectasis",
+    "Nodule",
+    "Mass",
+    "Consolidation",
+    "Edema",
+    "Pneumonia",
+    "Infiltration",
+    "Emphysema",
+    "Fibrosis",
+    "Pleural_Thickening",
+    "Hernia"
+  ],
+  "n_clusters": 3004,
+  "nih_accuracy_zeroshot": 0.5012205947625389,
+  "nih_flip_rate": 0.4174434087882823,
+  "nih_lens_divergence_flip": [
+    1.217,
+    1.335,
+    1.341,
+    1.337,
+    1.335,
+    1.333
+  ],
+  "nih_lens_divergence_nonflip": [
+    0.488,
+    0.524,
+    0.54,
+    0.545,
+    0.547,
+    0.546
+  ],
+  "nih_flip_vs_nonflip_ratio": [
+    2.5,
+    2.55,
+    2.49,
+    2.45,
+    2.44,
+    2.44
+  ],
+  "nih_divergence_flip_pointbiserial": [
+    0.74,
+    0.74,
+    0.73,
+    0.72,
+    0.72,
+    0.72
+  ]
+}

@@ -21,7 +21,8 @@ import torch.nn as nn
 
 
 class BabyGemmaVLM(nn.Module):
-    def __init__(self, vocab_size, dim=384, depth=6, n_img=256, max_len=32, vision_dim=1152):
+    def __init__(self, vocab_size, dim=384, depth=6, n_img=256, max_len=32, vision_dim=1152,
+                 yes_id=None, no_id=None):
         super().__init__()
         from transformers import Gemma3TextConfig, Gemma3TextModel
         seq = n_img + max_len
@@ -44,7 +45,10 @@ class BabyGemmaVLM(nn.Module):
         # multimodal projector (LayerNorm + MLP), analogous to Gemma's soft-token projection
         self.vproj = nn.Sequential(
             nn.LayerNorm(vision_dim), nn.Linear(vision_dim, dim), nn.GELU(), nn.Linear(dim, dim))
-        self.head = nn.Linear(dim, 2)
+        # readout: yes/no token logits from the tied LM head (no separate classifier),
+        # matching how MedGemma decides yes/no. Defaults to the last two vocab ids.
+        self.no_id = no_id if no_id is not None else vocab_size - 2
+        self.yes_id = yes_id if yes_id is not None else vocab_size - 1
         self.n_img = n_img
         self.ans_offset = n_img
         self.cfg = SimpleNamespace(dim=dim, depth=depth, fusion="gemma_prefix",
@@ -72,7 +76,8 @@ class BabyGemmaVLM(nn.Module):
 
         h = out.last_hidden_state
         pooled = h[torch.arange(B, device=h.device), ans_idx]
-        logits = self.head(pooled)
+        W = self.gemma.get_input_embeddings().weight               # tied LM head [vocab, dim]
+        logits = pooled @ W[[self.no_id, self.yes_id]].T           # [B, 2] = [no, yes]
         acts = list(out.hidden_states[1:]) if capture else None    # per-layer residual streams
         return logits, acts
 

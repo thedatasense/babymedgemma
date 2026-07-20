@@ -8,9 +8,9 @@
   "vision_dropout": 0.25,
   "n_train": 6862,
   "n_eval_clusters": 231,
-  "trainable_params": 13861634,
-  "accuracy": 0.8926681783824642,
-  "accuracy_vision_ablated": 0.7354497354497355,
-  "grounding_gap": 0.15721844293272869,
-  "flip_rate": 0.06493506493506493
+  "trainable_params": 13861248,
+  "accuracy": 0.8752834467120182,
+  "accuracy_vision_ablated": 0.7694633408919124,
+  "grounding_gap": 0.10582010582010581,
+  "flip_rate": 0.08658008658008658
 }

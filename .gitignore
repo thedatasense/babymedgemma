@@ -1,6 +1,8 @@
 # Heavy artifacts live on Hugging Face (saillab/babymedgemma), not in git
-cache/                 # MedSigLIP feature cache (~3 GB)
-**/model.pt            # per-run checkpoints (~10 GB)
+# MedSigLIP feature cache (~1 GB)
+cache/
+# per-run checkpoints (~4 GB) in either results dir
+**/model.pt
 
 # Logs and Python cruft
 *.log
@@ -13,5 +15,7 @@ __pycache__/
 # Local data index variants (regenerable)
 data/index_10k.json*
 
-# transformers-packaged model output (weights on HF)
+# transformers-packaged build output (weights on HF)
 hf_model/
+hf_export/
+_hf_upload.py

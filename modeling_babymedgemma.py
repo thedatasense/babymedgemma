@@ -23,8 +23,9 @@ from transformers.modeling_outputs import SequenceClassifierOutput
 class BabyMedGemmaConfig(PretrainedConfig):
     model_type = "baby_medgemma"
 
-    def __init__(self, vocab_size=733, hidden_size=384, num_hidden_layers=6,
-                 n_img=256, vision_dim=1152, max_len=32, vocab=None, **kwargs):
+    def __init__(self, vocab_size=735, hidden_size=384, num_hidden_layers=6,
+                 n_img=256, vision_dim=1152, max_len=32, vocab=None,
+                 yes_id=None, no_id=None, **kwargs):
         super().__init__(**kwargs)
         self.vocab_size = vocab_size
         self.hidden_size = hidden_size
@@ -33,6 +34,8 @@ class BabyMedGemmaConfig(PretrainedConfig):
         self.vision_dim = vision_dim
         self.max_len = max_len
         self.vocab = vocab or []
+        self.yes_id = yes_id if yes_id is not None else vocab_size - 1
+        self.no_id = no_id if no_id is not None else vocab_size - 2
         self.num_labels = 2
         self.id2label = {0: "no", 1: "yes"}
         self.label2id = {"no": 0, "yes": 1}
@@ -62,7 +65,7 @@ class BabyMedGemmaForVQA(PreTrainedModel):
         self.vproj = nn.Sequential(
             nn.LayerNorm(config.vision_dim), nn.Linear(config.vision_dim, config.hidden_size),
             nn.GELU(), nn.Linear(config.hidden_size, config.hidden_size))
-        self.head = nn.Linear(config.hidden_size, config.num_labels)
+        # yes/no decided from the tied LM head (no separate classifier), like MedGemma
         self.n_img = config.n_img
         self._stoi = {w: i for i, w in enumerate(config.vocab)}
         self.post_init()
@@ -80,7 +83,8 @@ class BabyMedGemmaForVQA(PreTrainedModel):
         hidden = self.gemma(inputs_embeds=torch.cat([img, txt], dim=1)).last_hidden_state
         idx = ans_pos.to(hidden.device) + self.n_img
         pooled = hidden[torch.arange(B, device=hidden.device), idx]
-        logits = self.head(pooled)
+        W = self.gemma.get_input_embeddings().weight               # tied LM head [vocab, dim]
+        logits = pooled @ W[[self.config.no_id, self.config.yes_id]].T   # [B, 2] = [no, yes]
         loss = F.cross_entropy(logits, labels) if labels is not None else None
         return SequenceClassifierOutput(loss=loss, logits=logits)
 
@@ -102,10 +106,12 @@ class BabyMedGemmaForVQA(PreTrainedModel):
         from transformers import AutoModel, AutoProcessor
         proc = AutoProcessor.from_pretrained("google/medsiglip-448")
         enc = AutoModel.from_pretrained("google/medsiglip-448").vision_model.to(device).eval()
-        px = proc(images=pil_images, return_tensors="pt")["pixel_values"].to(device)
-        out = enc(pixel_values=px).last_hidden_state              # [B, 1024, 1152]
+        px = proc(images=pil_images, return_tensors="pt",
+                  size={"height": 896, "width": 896})["pixel_values"].to(device)
+        out = enc(pixel_values=px, interpolate_pos_encoding=True).last_hidden_state  # [B, 4096, 1152]
         B, N, D = out.shape
         g = int(N ** 0.5)
+        k = max(1, g // 16)
         grid = out.float().transpose(1, 2).reshape(B, D, g, g)
-        pooled = F.avg_pool2d(grid, kernel_size=2, stride=2)      # [B, D, 16, 16]
+        pooled = F.avg_pool2d(grid, kernel_size=k, stride=k)      # [B, D, 16, 16]
         return pooled.flatten(2).transpose(1, 2).to(dtype)        # [B, 256, 1152]

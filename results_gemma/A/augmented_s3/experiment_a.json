@@ -4,30 +4,30 @@
   "steps": 2000,
   "depth": 6,
   "early_stop_step": 225,
-  "val_acc": 0.9103139013452914,
+  "val_acc": 0.9237668161434978,
   "vision_dropout": 0.0,
   "n_train": 6862,
   "n_eval_clusters": 231,
-  "trainable_params": 13861634,
-  "accuracy": 0.889644746787604,
-  "accuracy_vision_ablated": 0.762660619803477,
-  "grounding_gap": 0.12698412698412698,
-  "flip_rate": 0.09090909090909091,
+  "trainable_params": 13861248,
+  "accuracy": 0.8866213151927438,
+  "accuracy_vision_ablated": 0.6077097505668935,
+  "grounding_gap": 0.2789115646258503,
+  "flip_rate": 0.06060606060606061,
   "per_layer_dispersion_flip_corr": {
-    "0": 0.6724754519919492,
-    "1": 0.690428893240126,
-    "2": 0.6798049075398809,
-    "3": 0.6699895343638742,
-    "4": 0.6669661612833516,
-    "5": 0.6672960568812741
+    "0": 0.7641234266582801,
+    "1": 0.7403044093499246,
+    "2": 0.704937294458042,
+    "3": 0.6722268180375328,
+    "4": 0.6419567389247681,
+    "5": 0.6150747239909928
   },
-  "flip_fraction": 0.09090909090909091,
+  "flip_fraction": 0.06060606060606061,
   "phenomenon_disagreement": {
     "original": 0.004329004329004329,
-    "lexical_substitution": 0.038910505836575876,
-    "scope_quantification": 0.017699115044247787,
-    "syntactic_restructuring": 0.017857142857142856,
-    "negation_pattern": 0.010869565217391304,
-    "specificity_modulation": 0.03482587064676617
+    "lexical_substitution": 0.027237354085603113,
+    "scope_quantification": 0.004424778761061947,
+    "syntactic_restructuring": 0.008928571428571428,
+    "negation_pattern": 0.0,
+    "specificity_modulation": 0.029850746268656716
   }
 }

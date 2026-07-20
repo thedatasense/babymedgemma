@@ -66,7 +66,7 @@ def main(batch_size=48):
         img = load_rgb(p)
         if img is None:
             continue
-        img = img.resize((448, 448))  # decode/resize once here so the batch stays small
+        img = img.resize((896, 896))  # decode/resize once here (MedGemma input size)
         batch.append(img)
         batch_paths.append(p)
         if len(batch) >= batch_size:

@@ -3,17 +3,17 @@
   "seed": 4,
   "steps": 2000,
   "depth": 6,
-  "early_stop_step": 300,
-  "val_acc": 0.9192825112107623,
+  "early_stop_step": 150,
+  "val_acc": 0.9103139013452914,
   "vision_dropout": 0.0,
   "n_train": 6862,
   "n_eval_clusters": 231,
-  "trainable_params": 13861634,
-  "accuracy": 0.8964474678760394,
-  "accuracy_vision_ablated": 0.7853363567649282,
-  "grounding_gap": 0.11111111111111116,
-  "flip_rate": 0.06926406926406926,
-  "n_flip_targets": 16,
+  "trainable_params": 13861248,
+  "accuracy": 0.8790627362055934,
+  "accuracy_vision_ablated": 0.762660619803477,
+  "grounding_gap": 0.1164021164021164,
+  "flip_rate": 0.1038961038961039,
+  "n_flip_targets": 24,
   "n_nonflip_controls": 60,
   "recovery_rank1_by_layer": [
     1.0,
@@ -21,23 +21,23 @@
     1.0,
     1.0,
     1.0,
-    0.6875
+    0.7083333333333334
   ],
   "control_rank1_by_layer": [
-    0.0625,
     0.0,
     0.0,
     0.0,
     0.0,
-    0.0625
+    0.0,
+    0.0
   ],
   "net_rank1_by_layer": [
-    0.9375,
     1.0,
     1.0,
     1.0,
     1.0,
-    0.625
+    1.0,
+    0.7083333333333334
   ],
   "nonflip_disruption_by_layer": [
     0.0,

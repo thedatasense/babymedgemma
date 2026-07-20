@@ -16,11 +16,12 @@ Companion to the PhD dissertation *Paraphrase Sensitivity in Medical
 Vision-Language Models* (Thrust 3, mechanism and mitigation).
 
 > **Scope.** This is a controlled research probe, **not a general medical VQA
-> model**. It has a small domain-specific vocabulary (733 words from the
-> chest-X-ray presence questions) and grounds weakly, so it is loadable and
-> runnable for inspection and reproduction only. It supports a *sufficiency*
-> claim about the cause of paraphrase sensitivity, not proof that the deployed
-> MedGemma-4B has this exact origin. Not a medical device; not for clinical use.
+> model**. It has a small domain-specific vocabulary (734 words: the chest-X-ray
+> presence questions plus the yes/no answer tokens) and grounds weakly, so it is
+> loadable and runnable for inspection and reproduction only. It supports a
+> *sufficiency* claim about the cause of paraphrase sensitivity, not proof that
+> the deployed MedGemma-4B has this exact origin. Not a medical device; not for
+> clinical use.
 > The experiments below state exactly what it does and does not establish.
 
 ## The question
@@ -36,21 +37,23 @@ for.
 ## The probe
 
 ```
-chest X-ray ──► MedSigLIP-448 (frozen, 429M) ──► 1024 patches pooled to 256 tokens
+chest X-ray ──► MedSigLIP at 896px (frozen, 429M) ──► 4096 patches pooled to 256 tokens
                                                         │  prepended inline (prefix fusion)
 question (paraphrase) ──► token embeddings ─────────────┤
                                                         ▼
                                         Gemma-3 decoder (trained, 13.9M)
                                         RoPE · RMSNorm · GQA (6 Q / 2 KV) · causal mask
                                                         ▼
-                                            yes / no at the answer position
+                                yes / no read from the tied Gemma-3 LM head
 ```
 
 Trained on 1,841 binary presence questions over 1,775 chest radiographs
 (MIMIC-CXR 980, PadChest 861), each carrying register-tagged paraphrases. It
-reaches 88.8% accuracy and is text-reliant like MedGemma (75% of answers
-unchanged when the image is removed, vs the deployed model's 81%). Two properties
-make it useful:
+reaches 88.2% accuracy and stays text-reliant like MedGemma: with the image
+removed it still answers at 68.8% (chance is 50%), so wording dominates. The
+896-pixel input, matching MedGemma's own resolution, does give it more genuine
+image use than a 448-pixel version would (the grounding gap is 0.19). Two
+properties make it useful:
 
 1. **Language-side by construction.** The encoder returns *identical* features for
    every paraphrase, so any answer that changes across paraphrases is in the
@@ -58,6 +61,35 @@ make it useful:
 2. **The origin is a knob.** We can vary the training-phrasing distribution with
    everything else held fixed, turning a difference in the flip rate into an
    *identified cause*.
+
+## Fidelity to MedGemma-1.5
+
+The probe follows the MedGemma-1.5 technical report
+([arXiv:2604.05081](https://arxiv.org/pdf/2604.05081)) on every architectural
+choice that decides *how* a paraphrase reaches the answer, and simplifies only the
+axes of scale and training that a controlled causal experiment needs to strip
+away. The first table is why a mechanism found here is expected to transfer; the
+second is why this is a probe and not a deployable model.
+
+**Matched to the deployment stack**
+
+| Principle | MedGemma-1.5 | baby-Gemma |
+|---|---|---|
+| Vision encoder | MedSigLIP (400M SigLIP), frozen | MedSigLIP-448, frozen |
+| Input resolution | 896 x 896 | 896 x 896 (position embeddings interpolated) |
+| Image tokens per image | 256 (pooled) | 4096 patches average-pooled to 256 |
+| Vision-to-text fusion | soft image tokens projected inline | multilayer-perceptron projector, prepended inline |
+| Decoder family | Gemma-3 | Gemma-3 blocks: RoPE, RMSNorm, grouped-query attention, GeGLU, QK-norm |
+| yes/no readout | generated as text through the LM head | yes/no token logits from the tied LM head |
+
+**Intentionally simplified for the experiment**
+
+| Axis | MedGemma-1.5 | baby-Gemma | Why |
+|---|---|---|---|
+| Decoder scale | 4B parameters, pretrained | 13.9M, trained from scratch | so the training-phrasing distribution is a controllable input, not a frozen prior |
+| Training objective | supervised fine-tuning, distillation, reinforcement learning | supervised, validation early-stopped | keeps the only manipulated variable the phrasing distribution |
+| Vocabulary | full Gemma tokenizer | 734 words: the chest-X-ray questions plus the yes/no answer tokens | a closed vocabulary makes the register regimes exactly specifiable |
+| Local attention | 5:1 local/global sliding window | one window over the whole short sequence | the 256+32 sequence is shorter than any window, so the pattern is inert here |
 
 ## The framework: five experiments, A to E
 
@@ -86,13 +118,14 @@ identified cause.
 
 | Regime | Trained on | Flip rate |
 |---|---|---|
-| Augmented | every paraphrase | **8.4%** |
-| Canonical | one fixed phrasing | 30.3% |
-| Adversarial | register tied to the answer | 30.4% |
+| Augmented | every paraphrase | **9.5%** |
+| Canonical | one fixed phrasing | 29.5% |
+| Adversarial | register tied to the answer | 33.1% |
 
 Augmented separates from both narrow regimes at the maximum effect size
-(Mann-Whitney U p = 1.4e-6, Cliff's delta = 1.00). The two narrow regimes are
-indistinguishable from each other (p = 0.62).
+(Mann-Whitney U p = 1.5e-6, Cliff's delta = 1.00, 16 seeds each). The two narrow
+regimes are not significantly different at the 0.05 level (p = 0.06, Cliff's delta
+= 0.39), so the coverage-versus-shortcut distinction stays unproven.
 
 **What it proves.** The training-phrasing distribution is *sufficient* to produce
 and to remove paraphrase sensitivity, and broad coverage is the single largest
@@ -103,10 +136,10 @@ taxonomy of flip types.
 ### B. Where it emerges: divergence trajectory
 
 Within-cluster representation dispersion couples to the flip from the earliest
-layers (point-biserial near 0.64 at the input for natural flips, near 0.90
-throughout for adversarial), and lexical substitution drives the most naturally
-occurring flips. **The disagreement is present early and carried by the wording,
-not seeded in the image.**
+layers (point-biserial 0.76 at the input for natural flips, 0.88 for adversarial),
+and lexical substitution and scope shifts drive the most disagreement. **The
+disagreement is present early and carried by the wording, not seeded in the
+image.**
 
 ### C. The mechanism: causal patching
 
@@ -116,13 +149,13 @@ other) at one layer at a time. It restores the flipped answer with net recovery
 near 1.0 across the early layers (decision locus at layers 0 to 1), while a
 norm-matched random direction and a non-flip-cluster control leave the answer
 unchanged (disruption 0.000). This holds for the *naturally occurring* flips of
-the augmented regime (18.8 per seed), not only the injected adversarial ones (59.7
+the augmented regime (20.0 per seed), not only the injected adversarial ones (60.0
 per seed). **The flip is a low-rank, language-side, readout-stage direction,
 decided in the early layers, and not an artifact of the adversarial construction.**
 
 ### D. Ruling out architecture
 
-Across decoder depths 2, 4, 6, 8 the flip rate stays within 7.6% to 9.4% at
+Across decoder depths 2, 4, 6, 8 the flip rate stays within 9.1% to 10.2% at
 constant accuracy. **Depth is not the driver.**
 
 ### E. Ruling out weak grounding
@@ -140,11 +173,11 @@ matches the causal flip direction from C.
 
 ![What the sparse autoencoder tests](figures/sae_concept.png)
 
-An unsupervised feature aligns with the causal flip direction at |cosine| 0.51,
-edging out PCA's 0.48 and far above a random direction's 0.04; a distinct feature
-predicts flips (point-biserial 0.37). The flip axis is unsupervised-recoverable,
-not an artifact of the supervised difference-of-means, though it is not a single
-sharp gate.
+An unsupervised feature aligns with the causal flip direction at |cosine| 0.74,
+clearly ahead of principal-component analysis at 0.52 and far above a random
+direction's 0.04; a distinct feature predicts flips (point-biserial 0.43). The
+flip axis is unsupervised-recoverable, not an artifact of the supervised
+difference-of-means.
 
 ![An unsupervised feature recovers the causal flip axis](figures/sae_alignment.png)
 
@@ -154,8 +187,8 @@ readouts track together early, then commit to opposite answers.
 
 ![What the Jacobian lens shows](figures/jlens_concept.png)
 
-Across paraphrases, flipping clusters diverge about **9.5x** more than stable ones,
-from layer 0, with a divergence-vs-flip correlation of **0.71**. A lens and a
+Across paraphrases, flipping clusters diverge about **8.9x** more than stable ones,
+from layer 0, with a divergence-vs-flip correlation of **0.81**. A lens and a
 causal patch, with different assumptions, place the flip in the same early layers.
 
 ![The lens splits flipping from stable paraphrases](figures/jlens_divergence.png)
@@ -168,25 +201,27 @@ baby-Gemma, trained only on MIMIC and PadChest, answering questions about 2,227
 
 | Measure | NIH (zero-shot) | Native |
 |---|---|---|
-| Accuracy | 0.506 (chance) | 0.882 |
-| Flip rate | 0.111 | 0.082 |
-| Lens flip/non-flip divergence ratio | ~2.0x | ~9.5x |
+| Accuracy | 0.501 (chance) | 0.882 |
+| Flip rate | 0.417 | 0.095 |
+| Lens flip/non-flip divergence ratio | ~2.5x | ~8.9x |
 
 ![Zero-shot transfer to NIH ChestX-ray14](figures/nih_transfer.png)
 
 The paraphrase-sensitivity *mechanism* transfers: on unseen radiographs the model
-still flips at a realistic rate and the lens still separates flipping clusters
-from stable ones. The model's *competence* does not (chance accuracy on NIH), so
-these are flips of an out-of-distribution model, which is why the signal is
-weaker. Paraphrase sensitivity is a property of how the model reads the wording,
-so it shows up even when the model is out of its depth on the images.
+flips even more often (0.417, against 0.095 on its native data) and the lens still
+separates flipping clusters from stable ones, though more weakly (2.5x, against
+8.9x native). The model's *competence* does not transfer (chance accuracy on NIH),
+so these are flips of an out-of-distribution model, which is why the lens signal
+is weaker even as the flip rate rises. Paraphrase sensitivity is a property of how
+the model reads the wording, so it shows up even when the model is out of its depth
+on the images.
 
 ## The claim, stated exactly
 
 The origin of paraphrase sensitivity is the **training-phrasing distribution**,
 executed as a **low-rank direction in the early language layers** that read a
 fixed visual representation. The fix follows: paraphrase augmentation is the lever
-(30.3% down to 8.4%), and a targeted low-rank edit at those layers is the
+(29.5% down to 9.5%), and a targeted low-rank edit at those layers is the
 efficient parametric fix, which is why a layers-15-to-19 low-rank adaptation
 reduces flips on the deployed model while full fine-tuning does not.
 
@@ -202,8 +237,8 @@ reduces flips on the deployed model while full fine-tuning does not.
   decided and *why* it is learnable, not to image use; experiment E was
   inconclusive.
 - **The coverage-vs-shortcut distinction did not reproduce** (A: the two narrow
-  regimes are statistically indistinguishable).
-- **It is a narrow model, not a medical VQA system,** with a 733-word
+  regimes are not significantly different at the 0.05 level, p = 0.06).
+- **It is a narrow model, not a medical VQA system,** with a 734-word
   domain-specific vocabulary, loadable and runnable for inspection and
   reproduction only. Not for clinical use.
 
@@ -221,7 +256,7 @@ early-to-middle band, and set by the training-phrasing distribution.
 ```
 gemma_model.py          baby-Gemma: Gemma-3 decoder + frozen MedSigLIP, prefix fusion
 model.py                retired hand-rolled nano probe (kept for reference)
-vision.py               frozen MedSigLIP-448 wrapper (1024 -> 256 pooled tokens)
+vision.py               frozen MedSigLIP wrapper (896px, 4096 -> 256 pooled tokens)
 precompute_features.py  cache the frozen encoder features once
 data_index.py           MIMIC + PadChest binary VQA with register-tagged paraphrases
 dataset.py              the three training regimes (canonical / augmented / adversarial)

@@ -16,8 +16,9 @@ import torch.nn.functional as F
 
 MODEL_ID = "google/medsiglip-448"
 VISION_DIM = 1152
-POOLED_TOKENS = 256  # 16x16 after 2x2 pooling of the 32x32 grid
-GRID = 32
+IMAGE_SIZE = 896       # MedGemma runs MedSigLIP at 896x896 (position embeddings interpolated)
+POOLED_TOKENS = 256    # 16x16 after pooling the 64x64 patch grid, matching MedGemma
+GRID = 64
 
 
 class MedSigLIP:
@@ -33,13 +34,17 @@ class MedSigLIP:
 
     @torch.no_grad()
     def encode(self, pil_images: list) -> torch.Tensor:
-        """PIL images -> pooled features [B, 256, 1152] (float16 on CPU)."""
-        px = self.processor(images=pil_images, return_tensors="pt")["pixel_values"]
+        """PIL images -> pooled features [B, 256, 1152] (float16 on CPU), encoded
+        at 896x896 like MedGemma (position embeddings interpolated), 64x64 patches
+        average-pooled to 16x16 = 256 tokens."""
+        px = self.processor(images=pil_images, return_tensors="pt",
+                            size={"height": IMAGE_SIZE, "width": IMAGE_SIZE})["pixel_values"]
         px = px.to(self.device, self.dtype)
-        out = self.vision(pixel_values=px).last_hidden_state  # [B, 1024, 1152]
+        out = self.vision(pixel_values=px, interpolate_pos_encoding=True).last_hidden_state  # [B, 4096, 1152]
         B, N, D = out.shape
-        g = int(N ** 0.5)
-        grid = out.float().transpose(1, 2).reshape(B, D, g, g)     # [B, D, 32, 32]
-        pooled = F.avg_pool2d(grid, kernel_size=2, stride=2)       # [B, D, 16, 16]
+        g = int(N ** 0.5)                                          # 64
+        k = max(1, g // 16)                                        # pool to 16x16 (kernel 4 at 896)
+        grid = out.float().transpose(1, 2).reshape(B, D, g, g)     # [B, D, 64, 64]
+        pooled = F.avg_pool2d(grid, kernel_size=k, stride=k)       # [B, D, 16, 16]
         pooled = pooled.flatten(2).transpose(1, 2)                 # [B, 256, D]
         return pooled.half().cpu()

@@ -61,6 +61,9 @@ class Tokenizer:
             for w in tokenize_words(t):
                 if w not in vocab:
                     vocab[w] = len(vocab)
+        for w in ("no", "yes"):     # answer tokens (never in the questions), read from the LM head
+            if w not in vocab:
+                vocab[w] = len(vocab)
         self.stoi = vocab
         self.itos = [w for w, _ in sorted(vocab.items(), key=lambda x: x[1])]
         self.pad_id = 0

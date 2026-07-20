@@ -60,7 +60,8 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     feats = load_feature_cache()
     if arch == "gemma":
         from gemma_model import BabyGemmaVLM
-        model = BabyGemmaVLM(vocab_size=len(tok), dim=dim, depth=depth).to(device)
+        model = BabyGemmaVLM(vocab_size=len(tok), dim=dim, depth=depth,
+                             yes_id=tok.stoi["yes"], no_id=tok.stoi["no"]).to(device)
     else:
         cfg = NanoVLMConfig(vocab_size=len(tok), depth=depth, dim=dim, heads=max(1, dim // 64), fusion=fusion)
         model = NanoVLM(cfg).to(device)

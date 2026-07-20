@@ -3,14 +3,14 @@
   "seed": 0,
   "steps": 2000,
   "depth": 6,
-  "early_stop_step": 150,
-  "val_acc": 0.9237668161434978,
+  "early_stop_step": 450,
+  "val_acc": 0.9282511210762332,
   "vision_dropout": 0.0,
   "n_train": 6862,
   "n_eval_clusters": 231,
-  "trainable_params": 13861634,
-  "accuracy": 0.891912320483749,
-  "accuracy_vision_ablated": 0.8019652305366591,
-  "grounding_gap": 0.08994708994708989,
-  "flip_rate": 0.09523809523809523
+  "trainable_params": 13861248,
+  "accuracy": 0.8707482993197279,
+  "accuracy_vision_ablated": 0.6787603930461074,
+  "grounding_gap": 0.1919879062736205,
+  "flip_rate": 0.08658008658008658
 }
