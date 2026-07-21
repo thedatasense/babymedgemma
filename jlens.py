@@ -67,7 +67,8 @@ def fit_jacobian(model, dataset, device, n_fit=256):
         model.zero_grad(set_to_none=True)
         captured.clear()
         vis = b["vision"].to(device)
-        logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device))
+        kw = {"ground": b["ground"].to(device)} if getattr(model, "use_ground", False) else {}
+        logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device), **kw)
         margin = logits[0, 1] - logits[0, 0]
         margin.backward()
         ai = int(b["ans_pos"][0]) + model.n_img
@@ -103,7 +104,9 @@ def read_lens(model, dataset, device, J, Hbar, mbar):
     rows = []  # per example: (cluster, phenomenon, pred, [lens margin per layer])
     for b in loader:
         captured.clear()
-        logits, _ = model(b["vision"].to(device), b["tokens"].to(device), b["ans_pos"].to(device))
+        kw = {"ground": b["ground"].to(device)} if getattr(model, "use_ground", False) else {}
+        logits, _ = model(b["vision"].to(device), b["tokens"].to(device),
+                          b["ans_pos"].to(device), **kw)
         preds = logits.argmax(-1).cpu().tolist()
         B = b["tokens"].shape[0]
         ai = (b["ans_pos"] + model.n_img).to(device)
@@ -151,8 +154,9 @@ def analyze(rows, depth, flips):
     return div, div_flip, div_noflip, per_layer_pb
 
 
-def run(seed, arch, out, n_fit=256):
-    art = train_model(regime="augmented", seed=seed, arch=arch)
+def run(seed, arch, out, n_fit=256, use_ground=False, model_steps=1500):
+    art = train_model(regime="augmented", seed=seed, arch=arch,
+                      use_ground=use_ground, steps=model_steps)
     model, ds, device = art["model"], art["eval_ds"], art["device"]
     print(f"[jlens] model acc={art['result']['accuracy']:.3f} flip={art['result']['flip_rate']:.3f}")
 
@@ -193,10 +197,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--arch", default="gemma", choices=["nano", "gemma"])
+    ap.add_argument("--grounding-token", action="store_true")
+    ap.add_argument("--model-steps", type=int, default=1500)
     ap.add_argument("--n-fit", type=int, default=256)
     ap.add_argument("--out", default="results/jlens")
     a = ap.parse_args()
-    run(a.seed, a.arch, a.out, n_fit=a.n_fit)
+    run(a.seed, a.arch, a.out, n_fit=a.n_fit,
+        use_ground=a.grounding_token, model_steps=a.model_steps)
 
 
 if __name__ == "__main__":

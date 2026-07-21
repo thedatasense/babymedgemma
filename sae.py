@@ -44,8 +44,9 @@ def capture(model, dataset, device, batch_size=256):
     meta = []  # (cluster_id, phenomenon, pred)
     for b in loader:
         idx = (b["ans_pos"] + model.n_img).to(device)
+        kw = {"ground": b["ground"].to(device)} if getattr(model, "use_ground", False) else {}
         logits, acts = model(b["vision"].to(device), b["tokens"].to(device),
-                             b["ans_pos"].to(device), capture=True)
+                             b["ans_pos"].to(device), capture=True, **kw)
         preds = logits.argmax(-1).cpu().tolist()
         B = b["tokens"].shape[0]
         ar = torch.arange(B, device=device)
@@ -153,8 +154,11 @@ def register_selectivity(Z, meta, feature):
     return {ph: float(np.mean(v)) for ph, v in by_ph.items()}
 
 
-def run(layer, out, seed=0, m=2048, k=16, arch="nano"):
-    art = train_model(regime="augmented", seed=seed, arch=arch)
+def run(layer, out, seed=0, m=2048, k=16, arch="nano", use_ground=False, model_steps=1500):
+    # the probe being analysed must be converged; the scaled model needs ~8k steps,
+    # so analysing it at the old 1,500-step default would describe an undertrained net
+    art = train_model(regime="augmented", seed=seed, arch=arch,
+                      use_ground=use_ground, steps=model_steps)
     model, ds, device = art["model"], art["eval_ds"], art["device"]
     print(f"[sae] model acc={art['result']['accuracy']:.3f} flip={art['result']['flip_rate']:.3f}")
 
@@ -220,8 +224,11 @@ def main():
     ap.add_argument("--topk", type=int, default=16)
     ap.add_argument("--out", default="results/sae")
     ap.add_argument("--arch", default="nano", choices=["nano", "gemma"])
+    ap.add_argument("--grounding-token", action="store_true")
+    ap.add_argument("--model-steps", type=int, default=1500)
     a = ap.parse_args()
-    run(a.layer, a.out, seed=a.seed, m=a.dict, k=a.topk, arch=a.arch)
+    run(a.layer, a.out, seed=a.seed, m=a.dict, k=a.topk, arch=a.arch,
+        use_ground=a.grounding_token, model_steps=a.model_steps)
 
 
 if __name__ == "__main__":
