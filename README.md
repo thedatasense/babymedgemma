@@ -16,12 +16,11 @@ Companion to the PhD dissertation *Paraphrase Sensitivity in Medical
 Vision-Language Models* (Thrust 3, mechanism and mitigation).
 
 > **Scope.** This is a controlled research probe, **not a general medical VQA
-> model**. It has a small domain-specific vocabulary (734 words: the chest-X-ray
-> presence questions plus the yes/no answer tokens) and grounds weakly, so it is
-> loadable and runnable for inspection and reproduction only. It supports a
-> *sufficiency* claim about the cause of paraphrase sensitivity, not proof that
-> the deployed MedGemma-4B has this exact origin. Not a medical device; not for
-> clinical use.
+> model**. It answers binary presence questions about 14 chest findings, using
+> MedGemma's SentencePiece vocabulary pruned to the 141 pieces this corpus needs.
+> It supports a *sufficiency* claim about the cause of paraphrase sensitivity, not
+> proof that the deployed MedGemma-4B has this exact origin. Not a medical device;
+> not for clinical use.
 > The experiments below state exactly what it does and does not establish.
 
 ## The question
@@ -41,19 +40,18 @@ chest X-ray ──► MedSigLIP at 896px (frozen, 429M) ──► 4096 patches p
                                                         │  prepended inline (prefix fusion)
 question (paraphrase) ──► token embeddings ─────────────┤
                                                         ▼
-                                        Gemma-3 decoder (trained, 13.9M)
+                                        Gemma-3 decoder (trained, 14.1M)
                                         RoPE · RMSNorm · GQA (6 Q / 2 KV) · causal mask
                                                         ▼
                                 yes / no read from the tied Gemma-3 LM head
 ```
 
-Trained on 1,841 binary presence questions over 1,775 chest radiographs
-(MIMIC-CXR 980, PadChest 861), each carrying register-tagged paraphrases. It
-reaches 88.2% accuracy and stays text-reliant like MedGemma: with the image
-removed it still answers at 68.8% (chance is 50%), so wording dominates. The
-896-pixel input, matching MedGemma's own resolution, does give it more genuine
-image use than a 448-pixel version would (the grounding gap is 0.19). Two
-properties make it useful:
+Trained on 86,288 per-finding-balanced presence questions from **NIH ChestX-ray14
+and PadChest**, with **MIMIC-CXR and VinDr-CXR held out entirely**, each question
+carrying 48 register-tagged paraphrases. It reaches 74.8% accuracy and, because
+every split is balanced per finding, **exactly 50.0% with the image removed**, so
+all of its skill is visual. It transfers to both unseen hospitals (AUC 0.743 MIMIC,
+0.756 VinDr) above MedSigLIP's own zero-shot 0.734. Two properties make it useful:
 
 1. **Language-side by construction.** The encoder returns *identical* features for
    every paraphrase, so any answer that changes across paraphrases is in the
@@ -86,10 +84,10 @@ second is why this is a probe and not a deployable model.
 
 | Axis | MedGemma-1.5 | baby-Gemma | Why |
 |---|---|---|---|
-| Decoder scale | 4B parameters, pretrained | 13.9M, trained from scratch | so the training-phrasing distribution is a controllable input, not a frozen prior |
+| Decoder scale | 4B parameters, pretrained | 14.1M, trained from scratch | so the training-phrasing distribution is a controllable input, not a frozen prior |
 | Training objective | supervised fine-tuning, distillation, reinforcement learning | supervised, validation early-stopped | keeps the only manipulated variable the phrasing distribution |
-| Vocabulary | full Gemma tokenizer | 734 words: the chest-X-ray questions plus the yes/no answer tokens | a closed vocabulary makes the register regimes exactly specifiable |
-| Local attention | 5:1 local/global sliding window | one window over the whole short sequence | the 256+32 sequence is shorter than any window, so the pattern is inert here |
+| Vocabulary | full Gemma tokenizer (262,144) | **same tokenizer**, pruned to the 141 pieces this corpus uses (0.4% of the parameters) | identical segmentation to MedGemma; unseen words decompose into pieces rather than becoming padding |
+| Local attention | 5:1 local/global sliding window | one window over the whole short sequence | the 257+20 sequence is shorter than any window, so the pattern is inert here |
 
 ## The framework: five experiments, A to E
 
@@ -104,9 +102,12 @@ The five experiments isolate the origin in one line each:
 | **E** | Grounding | Is it caused by *weak image grounding*? |
 
 A establishes the cause; B and C localize and confirm the mechanism; D and E rule
-out the two obvious alternatives. Two corroborations (an unsupervised feature and
+out the two obvious alternatives. A, C and the threshold checks were re-run on the
+scaled model described above; **B, D and E are carried over from the earlier
+1,841-question probe** (published at `probe-1841/` on Hugging Face) and are
+reported as that model's results. Two corroborations (an unsupervised feature and
 a lens) and a zero-shot transfer test close it out. All figures are baby-Gemma
-over 16 seeds (`results_gemma/`).
+over 8 seeds (`results_transfer_grid/`).
 
 ### A. The cause: data provenance
 
@@ -116,16 +117,25 @@ over 16 seeds (`results_gemma/`).
 the training-phrasing distribution changes, a difference in the flip rate is an
 identified cause.
 
-| Regime | Trained on | Flip rate |
-|---|---|---|
-| Augmented | every paraphrase | **9.5%** |
-| Canonical | one fixed phrasing | 29.5% |
-| Adversarial | register tied to the answer | 33.1% |
+| Regime | Trained on | Flip rate | Flip rate, **unseen phrasings** |
+|---|---|---|---|
+| Augmented | every paraphrase | **4.8%** | **26.6%** |
+| Canonical | one fixed phrasing | 67.1% | 65.9% |
+| Adversarial | register tied to the answer | 88.4% | 87.4% |
 
 Augmented separates from both narrow regimes at the maximum effect size
-(Mann-Whitney U p = 1.5e-6, Cliff's delta = 1.00, 16 seeds each). The two narrow
-regimes are not significantly different at the 0.05 level (p = 0.06, Cliff's delta
-= 0.39), so the coverage-versus-shortcut distinction stays unproven.
+(Mann-Whitney U p = 1.6e-4, Cliff's delta = 1.00, 8 seeds each), and the two narrow
+regimes now separate from each other as well (p = 3.1e-4, delta = 0.97): a phrasing
+shortcut is a **distinct and larger harm** than narrow coverage alone. Accuracy
+follows the same ordering (75.3% / 66.8% / 58.1%), so the shortcut damages diagnosis
+and not only consistency. Text-only accuracy is 50.0-50.3% in every regime.
+
+The second column is the honest one. A model trained on every paraphrase has seen
+the phrasings it is tested on, so part of a low flip rate is familiarity. Training
+on 24 phrasings and scoring **only on the 24 withheld** (6 of each phenomenon per
+side), augmented rises 4.8% -> 26.6% but still flips less than half as often as
+canonical, delta = 1.00 (p = 2.2e-3). **Broad coverage generalises to wording never
+seen in training** -- which is what the mitigation claim actually needs.
 
 **What it proves.** The training-phrasing distribution is *sufficient* to produce
 and to remove paraphrase sensitivity, and broad coverage is the single largest
@@ -136,7 +146,7 @@ taxonomy of flip types.
 ### B. Where it emerges: divergence trajectory
 
 Within-cluster representation dispersion couples to the flip from the earliest
-layers (point-biserial 0.76 at the input for natural flips, 0.88 for adversarial),
+layers (point-biserial near 0.76 at the input for natural flips, 0.88 for adversarial),
 and lexical substitution and scope shifts drive the most disagreement. **The
 disagreement is present early and carried by the wording, not seeded in the
 image.**
@@ -146,10 +156,10 @@ image.**
 For a flipped question, transplant the answer position along a single rank-1
 direction (the difference between a phrasing answered one way and one answered the
 other) at one layer at a time. It restores the flipped answer with net recovery
-near 1.0 across the early layers (decision locus at layers 0 to 1), while a
-norm-matched random direction and a non-flip-cluster control leave the answer
-unchanged (disruption 0.000). This holds for the *naturally occurring* flips of
-the augmented regime (20.0 per seed), not only the injected adversarial ones (60.0
+0.98-1.00 across layers 0 to 4 for adversarial and 0.77 rising to 1.00 for natural
+flips, while a norm-matched random direction (0.00-0.02) and a non-flip-cluster
+control (disruption 0.000-0.006) leave the answer unchanged. This holds for the *naturally occurring* flips of
+the augmented regime (59 per seed), not only the injected adversarial ones (60
 per seed). **The flip is a low-rank, language-side, readout-stage direction,
 decided in the early layers, and not an artifact of the adversarial construction.**
 
@@ -254,7 +264,8 @@ label-definition mismatch between the two datasets, and is not trustworthy.
 The origin of paraphrase sensitivity is the **training-phrasing distribution**,
 executed as a **low-rank direction in the early language layers** that read a
 fixed visual representation. The fix follows: paraphrase augmentation is the lever
-(29.5% down to 9.5%), and a targeted low-rank edit at those layers is the
+(67.1% down to 4.8%, and to 26.6% on wording withheld from training), and a
+targeted low-rank edit at those layers is the
 efficient parametric fix, which is why a layers-15-to-19 low-rank adaptation
 reduces flips on the deployed model while full fine-tuning does not.
 
@@ -262,18 +273,20 @@ reduces flips on the deployed model while full fine-tuning does not.
 
 - **It is a controlled probe, not the deployed model.** The result is a
   *sufficiency* claim plus a localization, not proof that MedGemma-4B's paraphrase
-  sensitivity has this exact origin. Its absolute layer index (early, near layer
-  0-1) is not comparable to the deployed model's layer-16 commit; only the
-  qualitative account transfers.
+  sensitivity has this exact origin. Its absolute layer index (early, layers 0-4)
+  is not comparable to the deployed model's layer-16 commit; only the qualitative
+  account transfers.
 - **It manipulates adaptation-stage data, not pretraining provenance.**
-- **It grounds weakly (like MedGemma),** so it speaks to *where* the flip is
-  decided and *why* it is learnable, not to image use; experiment E was
-  inconclusive.
-- **The coverage-vs-shortcut distinction did not reproduce** (A: the two narrow
-  regimes are not significantly different at the 0.05 level, p = 0.06).
-- **It is a narrow model, not a medical VQA system,** with a 734-word
-  domain-specific vocabulary, loadable and runnable for inspection and
-  reproduction only. Not for clinical use.
+- **The paraphrases are a bank of 48 templates across four phenomena,** not free
+  clinician writing. The held-out-phrasing result establishes generalization to
+  unseen *templates*, not to arbitrary unseen language.
+- **Per-finding balancing removes the answer prior by design.** That is what lets
+  a flip be attributed to wording rather than a base rate, but it also makes the
+  probe unrepresentative of deployment, where prevalence is skewed and a model can
+  be right for the wrong reason.
+- **It is a narrow model, not a medical VQA system:** 14 findings, binary
+  questions, loadable and runnable for inspection and reproduction only. Not for
+  clinical use.
 
 ## Why it still matters: triangulation
 
