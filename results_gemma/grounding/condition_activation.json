@@ -1,0 +1,235 @@
+{
+  "per_seed": [
+    {
+      "seed": 0,
+      "baseline": {
+        "auc_yesno": 0.49954440322985555,
+        "auc_condition_token": 0.4970283598332922,
+        "auc_oracle_probe": 0.5157547165230569,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.46743055555555557,
+          "Is there cardiomegaly?": 0.5187847222222222,
+          "Is there consolidation?": 0.5271875,
+          "Is there edema?": 0.5758024691358026,
+          "Is there emphysema?": 0.49677083333333333,
+          "Is there fibrosis?": 0.532986111111111,
+          "Is there hernia?": 0.3820301783264746,
+          "Is there infiltrates?": 0.5226041666666665,
+          "Is there mass?": 0.5144097222222223,
+          "Is there nodule?": 0.5155208333333333,
+          "Is there pleural effusion?": 0.4468055555555555,
+          "Is there pleural thickening?": 0.3884722222222222,
+          "Is there pneumonia?": 0.5293491124260354,
+          "Is there pneumothorax?": 0.5402430555555555
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.4859027777777777,
+          "Is there cardiomegaly?": 0.3932638888888889,
+          "Is there consolidation?": 0.5132638888888889,
+          "Is there edema?": 0.5685802469135803,
+          "Is there emphysema?": 0.5800694444444444,
+          "Is there fibrosis?": 0.569236111111111,
+          "Is there hernia?": 0.5384087791495199,
+          "Is there infiltrates?": 0.4789930555555555,
+          "Is there mass?": 0.43263888888888885,
+          "Is there nodule?": 0.44333333333333336,
+          "Is there pleural effusion?": 0.5730555555555555,
+          "Is there pleural thickening?": 0.5666319444444444,
+          "Is there pneumonia?": 0.557396449704142,
+          "Is there pneumothorax?": 0.5197916666666667
+        }
+      },
+      "grounded": {
+        "auc_yesno": 0.6560562059155365,
+        "auc_condition_token": 0.5577974650455063,
+        "auc_oracle_probe": 0.6817899477132027,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.5863194444444445,
+          "Is there cardiomegaly?": 0.5068055555555555,
+          "Is there consolidation?": 0.7577083333333333,
+          "Is there edema?": 0.7156790123456791,
+          "Is there emphysema?": 0.663125,
+          "Is there fibrosis?": 0.45479166666666665,
+          "Is there hernia?": 0.40054869684499317,
+          "Is there infiltrates?": 0.621736111111111,
+          "Is there mass?": 0.6794444444444445,
+          "Is there nodule?": 0.6568750000000001,
+          "Is there pleural effusion?": 0.22861111111111113,
+          "Is there pleural thickening?": 0.6472916666666666,
+          "Is there pneumonia?": 0.648284023668639,
+          "Is there pneumothorax?": 0.24194444444444443
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.6978472222222222,
+          "Is there cardiomegaly?": 0.6913194444444445,
+          "Is there consolidation?": 0.7350694444444444,
+          "Is there edema?": 0.711358024691358,
+          "Is there emphysema?": 0.6509722222222223,
+          "Is there fibrosis?": 0.6474305555555556,
+          "Is there hernia?": 0.5775034293552812,
+          "Is there infiltrates?": 0.6491666666666667,
+          "Is there mass?": 0.6652777777777779,
+          "Is there nodule?": 0.6209027777777778,
+          "Is there pleural effusion?": 0.7759722222222223,
+          "Is there pleural thickening?": 0.7131944444444445,
+          "Is there pneumonia?": 0.6471005917159763,
+          "Is there pneumothorax?": 0.7619444444444444
+        }
+      }
+    },
+    {
+      "seed": 1,
+      "baseline": {
+        "auc_yesno": 0.4949206887307849,
+        "auc_condition_token": 0.47718798682785496,
+        "auc_oracle_probe": 0.5141529506949735,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.5036111111111111,
+          "Is there cardiomegaly?": 0.5278125,
+          "Is there consolidation?": 0.48829861111111106,
+          "Is there edema?": 0.4301234567901235,
+          "Is there emphysema?": 0.4974652777777777,
+          "Is there fibrosis?": 0.49472222222222223,
+          "Is there hernia?": 0.2709190672153635,
+          "Is there infiltrates?": 0.48822916666666666,
+          "Is there mass?": 0.5969097222222222,
+          "Is there nodule?": 0.47524305555555557,
+          "Is there pleural effusion?": 0.4297916666666667,
+          "Is there pleural thickening?": 0.5422916666666667,
+          "Is there pneumonia?": 0.5281656804733728,
+          "Is there pneumothorax?": 0.40704861111111107
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.4502777777777778,
+          "Is there cardiomegaly?": 0.5031944444444444,
+          "Is there consolidation?": 0.434375,
+          "Is there edema?": 0.5440123456790124,
+          "Is there emphysema?": 0.47868055555555555,
+          "Is there fibrosis?": 0.48951388888888886,
+          "Is there hernia?": 0.6426611796982167,
+          "Is there infiltrates?": 0.42864583333333334,
+          "Is there mass?": 0.574375,
+          "Is there nodule?": 0.45722222222222225,
+          "Is there pleural effusion?": 0.5584027777777778,
+          "Is there pleural thickening?": 0.5503819444444444,
+          "Is there pneumonia?": 0.5067455621301775,
+          "Is there pneumothorax?": 0.5796527777777777
+        }
+      },
+      "grounded": {
+        "auc_yesno": 0.6658930281757918,
+        "auc_condition_token": 0.45822800277305265,
+        "auc_oracle_probe": 0.7160356888481888,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.675625,
+          "Is there cardiomegaly?": 0.3563194444444444,
+          "Is there consolidation?": 0.36895833333333333,
+          "Is there edema?": 0.3012345679012346,
+          "Is there emphysema?": 0.47680555555555554,
+          "Is there fibrosis?": 0.4495138888888888,
+          "Is there hernia?": 0.3429355281207133,
+          "Is there infiltrates?": 0.6034027777777777,
+          "Is there mass?": 0.37104166666666666,
+          "Is there nodule?": 0.6065972222222221,
+          "Is there pleural effusion?": 0.1852777777777778,
+          "Is there pleural thickening?": 0.6581944444444444,
+          "Is there pneumonia?": 0.6833136094674557,
+          "Is there pneumothorax?": 0.3359722222222222
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.6936805555555555,
+          "Is there cardiomegaly?": 0.8347916666666667,
+          "Is there consolidation?": 0.7595138888888889,
+          "Is there edema?": 0.7001234567901236,
+          "Is there emphysema?": 0.6888888888888889,
+          "Is there fibrosis?": 0.7004861111111113,
+          "Is there hernia?": 0.8024691358024693,
+          "Is there infiltrates?": 0.5974305555555556,
+          "Is there mass?": 0.7006249999999999,
+          "Is there nodule?": 0.6252083333333334,
+          "Is there pleural effusion?": 0.8075694444444443,
+          "Is there pleural thickening?": 0.6619444444444444,
+          "Is there pneumonia?": 0.6246153846153846,
+          "Is there pneumothorax?": 0.8271527777777777
+        }
+      }
+    },
+    {
+      "seed": 2,
+      "baseline": {
+        "auc_yesno": 0.49739288718232805,
+        "auc_condition_token": 0.49056173466385367,
+        "auc_oracle_probe": 0.5234370177016189,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.4831944444444444,
+          "Is there cardiomegaly?": 0.4662152777777777,
+          "Is there consolidation?": 0.5199652777777778,
+          "Is there edema?": 0.5874074074074073,
+          "Is there emphysema?": 0.47684027777777777,
+          "Is there fibrosis?": 0.5331944444444444,
+          "Is there hernia?": 0.39574759945130317,
+          "Is there infiltrates?": 0.511423611111111,
+          "Is there mass?": 0.43503472222222217,
+          "Is there nodule?": 0.5125347222222222,
+          "Is there pleural effusion?": 0.5740277777777778,
+          "Is there pleural thickening?": 0.4380555555555555,
+          "Is there pneumonia?": 0.43467455621301776,
+          "Is there pneumothorax?": 0.4995486111111111
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.4165972222222223,
+          "Is there cardiomegaly?": 0.4575694444444445,
+          "Is there consolidation?": 0.45361111111111113,
+          "Is there edema?": 0.5709259259259258,
+          "Is there emphysema?": 0.5976388888888887,
+          "Is there fibrosis?": 0.5196527777777779,
+          "Is there hernia?": 0.6021947873799726,
+          "Is there infiltrates?": 0.5511458333333333,
+          "Is there mass?": 0.5445833333333334,
+          "Is there nodule?": 0.39513888888888893,
+          "Is there pleural effusion?": 0.581111111111111,
+          "Is there pleural thickening?": 0.5459375,
+          "Is there pneumonia?": 0.530414201183432,
+          "Is there pneumothorax?": 0.5615972222222222
+        }
+      },
+      "grounded": {
+        "auc_yesno": 0.6043742147704043,
+        "auc_condition_token": 0.5218844600780141,
+        "auc_oracle_probe": 0.7332204294926873,
+        "per_finding_condition": {
+          "Is there atelectasis?": 0.36791666666666667,
+          "Is there cardiomegaly?": 0.4478472222222222,
+          "Is there consolidation?": 0.6327777777777778,
+          "Is there edema?": 0.6195061728395062,
+          "Is there emphysema?": 0.3479166666666667,
+          "Is there fibrosis?": 0.5469444444444445,
+          "Is there hernia?": 0.3388203017832647,
+          "Is there infiltrates?": 0.44937499999999997,
+          "Is there mass?": 0.6249305555555555,
+          "Is there nodule?": 0.3820138888888889,
+          "Is there pleural effusion?": 0.7545138888888889,
+          "Is there pleural thickening?": 0.45222222222222225,
+          "Is there pneumonia?": 0.6915976331360947,
+          "Is there pneumothorax?": 0.6499999999999998
+        },
+        "per_finding_probe": {
+          "Is there atelectasis?": 0.7032638888888888,
+          "Is there cardiomegaly?": 0.8326388888888889,
+          "Is there consolidation?": 0.7917361111111112,
+          "Is there edema?": 0.7860493827160494,
+          "Is there emphysema?": 0.7620833333333332,
+          "Is there fibrosis?": 0.661875,
+          "Is there hernia?": 0.7805212620027434,
+          "Is there infiltrates?": 0.5901388888888889,
+          "Is there mass?": 0.6638194444444444,
+          "Is there nodule?": 0.6699305555555557,
+          "Is there pleural effusion?": 0.8125,
+          "Is there pleural thickening?": 0.6791666666666667,
+          "Is there pneumonia?": 0.6977514792899407,
+          "Is there pneumothorax?": 0.8336111111111111
+        }
+      }
+    }
+  ]
+}

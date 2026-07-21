@@ -1,0 +1,98 @@
+[
+  {
+    "seed": 0,
+    "baseline": 0.49954440322985555,
+    "grounded_real": 0.6560562059155365,
+    "grounded_shuffle": 0.5066378360217392
+  },
+  {
+    "seed": 1,
+    "baseline": 0.4949206887307849,
+    "grounded_real": 0.6658930281757918,
+    "grounded_shuffle": 0.5101654459190963
+  },
+  {
+    "seed": 2,
+    "baseline": 0.49739288718232805,
+    "grounded_real": 0.6043742147704043,
+    "grounded_shuffle": 0.5026528489086359
+  },
+  {
+    "seed": 3,
+    "baseline": 0.49396617856331176,
+    "grounded_real": 0.6557156144807498,
+    "grounded_shuffle": 0.5104102009332601
+  },
+  {
+    "seed": 4,
+    "baseline": 0.5050199613914892,
+    "grounded_real": 0.503833348479894,
+    "grounded_shuffle": 0.5034928885810296
+  },
+  {
+    "seed": 5,
+    "baseline": 0.5071049920092833,
+    "grounded_real": 0.525055675930854,
+    "grounded_shuffle": 0.4898854184422204
+  },
+  {
+    "seed": 6,
+    "baseline": 0.5048131293069862,
+    "grounded_real": 0.6414153348563961,
+    "grounded_shuffle": 0.49005857153293053
+  },
+  {
+    "seed": 7,
+    "baseline": 0.4937970164826468,
+    "grounded_real": 0.6291846117175534,
+    "grounded_shuffle": 0.5006254355542105
+  },
+  {
+    "seed": 8,
+    "baseline": 0.486380702680115,
+    "grounded_real": 0.6672337136786923,
+    "grounded_shuffle": 0.5101124266152756
+  },
+  {
+    "seed": 9,
+    "baseline": 0.4890445964390943,
+    "grounded_real": 0.6516465413082221,
+    "grounded_shuffle": 0.5083242943152132
+  },
+  {
+    "seed": 10,
+    "baseline": 0.4978369310763363,
+    "grounded_real": 0.6363955794653801,
+    "grounded_shuffle": 0.49448677255924395
+  },
+  {
+    "seed": 11,
+    "baseline": 0.5082291331485599,
+    "grounded_real": 0.5165199291053992,
+    "grounded_shuffle": 0.4996896913594741
+  },
+  {
+    "seed": 12,
+    "baseline": 0.5072736906341785,
+    "grounded_real": 0.5011120709972205,
+    "grounded_shuffle": 0.5005752649271168
+  },
+  {
+    "seed": 13,
+    "baseline": 0.4935519465794572,
+    "grounded_real": 0.6230909184265665,
+    "grounded_shuffle": 0.5211686687666033
+  },
+  {
+    "seed": 14,
+    "baseline": 0.5122235674759713,
+    "grounded_real": 0.5756287467808123,
+    "grounded_shuffle": 0.4994328011600092
+  },
+  {
+    "seed": 15,
+    "baseline": 0.5026631924152402,
+    "grounded_real": 0.6110172850521852,
+    "grounded_shuffle": 0.4872488283519267
+  }
+]

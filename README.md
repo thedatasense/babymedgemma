@@ -193,28 +193,61 @@ causal patch, with different assumptions, place the flip in the same early layer
 
 ![The lens splits flipping from stable paraphrases](figures/jlens_divergence.png)
 
-## Extension: zero-shot transfer to NIH (`nih_demo.py`)
+## Why binary accuracy cannot tell a blind model from a seeing one
 
-baby-Gemma, trained only on MIMIC and PadChest, answering questions about 2,227
-**NIH ChestX-ray14** radiographs it has never seen (all 14 findings in-vocabulary,
-3,004 clusters), through the frozen encoder:
+The probe above scored **0.50 accuracy on unseen NIH radiographs**, which reads as
+total failure. Scoring the same models by the **AUC of their yes/no margin** instead
+shows what accuracy was hiding (16 seeds, balanced 50/50 set):
 
-| Measure | NIH (zero-shot) | Native |
+| model | accuracy | AUC |
 |---|---|---|
-| Accuracy | 0.501 (chance) | 0.882 |
-| Flip rate | 0.417 | 0.095 |
-| Lens flip/non-flip divergence ratio | ~2.5x | ~8.9x |
+| no grounding token | 0.50 | **0.500** (genuinely blind, 16/16 seeds) |
+| grounding token **shuffled** across images | 0.52 | 0.502 |
+| grounding token, real | 0.53 | **0.604** |
 
-![Zero-shot transfer to NIH ChestX-ray14](figures/nih_transfer.png)
+All three score ~0.50 accuracy. Their AUCs are chance, chance, and clearly-not-chance.
+A binary yes/no readout collapses a continuous margin onto one decision threshold per
+finding, and that threshold is learned from the training distribution's prevalence;
+under a distribution shift the whole margin distribution moves and every image lands
+on one side. So the model answers "yes" to all cardiomegaly and "no" to all masses at
+exactly 50% accuracy, while ranking both correctly.
 
-The paraphrase-sensitivity *mechanism* transfers: on unseen radiographs the model
-flips even more often (0.417, against 0.095 on its native data) and the lens still
-separates flipping clusters from stable ones, though more weakly (2.5x, against
-8.9x native). The model's *competence* does not transfer (chance accuracy on NIH),
-so these are flips of an out-of-distribution model, which is why the lens signal
-is weaker even as the flip rate rises. Paraphrase sensitivity is a property of how
-the model reads the wording, so it shows up even when the model is out of its depth
-on the images.
+MedSigLIP itself pays this tax: **AUC 0.734 but accuracy 0.681** on the same task.
+**Report AUC.** Accuracy alone cannot detect whether a medical VLM is using the image,
+which is the metric the field mostly uses.
+
+The in-distribution flip-rate results are *not* affected by this. A threshold sweep
+holds the augmented < canonical ordering at every non-degenerate offset, and a
+threshold-free statistic (within-cluster margin dispersion over between-cluster
+dispersion) reproduces it at maximal effect size: augmented 0.073, canonical 0.284,
+adversarial 0.312, p = 1.5e-6, Cliff's delta = 1.00.
+
+## Scaling up: a grounded model that transfers (`build_transfer_index.py`)
+
+The probe is deliberately small. Given the diagnosis above, three changes make it
+actually read radiographs: **per-finding answer balancing** (so the question text
+predicts nothing and the only way to reduce loss is to look), the **grounding token**,
+and **scale** (107k questions over 66,546 images from the full ChestX-ray14). Trained
+on NIH + PadChest with **MIMIC and VinDr held out entirely**:
+
+| split | n | accuracy | AUC | text-only floor | flip |
+|---|---|---|---|---|---|
+| in-distribution (held-out images) | 15,112 | 0.748 | 0.827 | **0.500** | 0.061 |
+| **MIMIC (unseen hospital)** | 450 | 0.671 | **0.743** | **0.500** | 0.049 |
+| **VinDr (unseen hospital)** | 5,478 | 0.686 | **0.756** | **0.500** | 0.060 |
+
+Both held-out hospitals exceed MedSigLIP's own zero-shot ceiling (0.734), against the
+small probe's 0.500. The text-only floor is exactly 0.500 everywhere by construction,
+so every point above it is earned from the image: **+24.8 pp of visual skill**, versus
++19.4 pp for the 88.2%-accurate original whose blind floor was 68.8%.
+
+Scale alone was not the fix. An earlier 10k scale-up was abandoned as "stuck at
+chance" — it was scored by accuracy, and it lacked both the balancing and the
+grounding token. All three were needed.
+
+Per finding, pneumothorax transfers essentially unchanged (0.899 -> 0.903 on VinDr).
+**Pleural thickening inverts on VinDr (AUC 0.332, below chance)**, almost certainly a
+label-definition mismatch between the two datasets, and is not trustworthy.
 
 ## The claim, stated exactly
 
@@ -269,6 +302,15 @@ nih_demo.py             zero-shot NIH transfer
 figures.py              regenerate the figures/ from the result JSONs
 run_all_gpus.py         A-E grid scheduler across GPUs
 results_gemma/          baby-Gemma results (compact JSON here; model.pt on HF)
+
+templates.py            48-paraphrase bank (meaning-preserving; negation kept separate)
+gemma_tokenizer.py      MedGemma SentencePiece pruned to the corpus (141 pieces)
+build_transfer_index.py train NIH+PadChest, hold out MIMIC+VinDr as unseen hospitals
+encode_shard.py         shard the 896 patch + 448 pooled encoding across GPUs
+eval_transfer.py        accuracy + AUC + text-only floor per split
+nih_auc_analysis.py     the AUC-vs-accuracy diagnosis (blind vs seeing)
+flip_threshold_robustness.py  threshold sweep + threshold-free dispersion ratio
+results_transfer/       scaled-model results
 docs/                   design doc + 4B-replication plan
 ```
 
@@ -282,20 +324,34 @@ The trained probe is packaged as a custom `transformers` model (loadable via
 `trust_remote_code`); `modeling_babymedgemma.py` holds the config and model
 classes.
 
+Two variants are published. The **repo root** is the scaled grounded model that
+transfers to unseen hospitals; **`probe-1841/`** is the controlled probe behind
+experiments A to E above.
+
 ```python
 import torch
 from transformers import AutoModel
-
-model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
-input_ids, ans_pos = model.encode_question("is there cardiomegaly ?")
 from PIL import Image
-vision_features = model.encode_images([Image.open("cxr.png").convert("RGB")])  # frozen MedSigLIP
-logits = model(input_ids=input_ids, vision_features=vision_features, ans_pos=ans_pos).logits
+
+# scaled grounded model (default)
+model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
+input_ids, ans_pos = model.encode_question("is there pleural effusion?")
+vision_features, ground = model.encode_images([Image.open("cxr.png").convert("RGB")])
+logits = model(input_ids=input_ids, vision_features=vision_features,
+               ground=ground, ans_pos=ans_pos).logits
 print(model.config.id2label[int(logits.argmax(-1))])   # "yes" or "no"
+
+# the dissertation probe (no grounding token, word-level vocabulary)
+probe = AutoModel.from_pretrained("saillab/babymedgemma", subfolder="probe-1841",
+                                  trust_remote_code=True).eval()
 ```
 
-The bundled weights are the augmented seed-0 checkpoint; every other checkpoint
-under HF `checkpoints/` is a `state_dict` for `BabyGemmaVLM` in `gemma_model.py`.
+The two are **not interchangeable**: the A-E numbers reproduce only with
+`probe-1841/`, whose training distribution they describe. The root model uses
+MedGemma's own SentencePiece tokenizer pruned to 141 pieces (0.4% of the parameters)
+rather than a hand-rolled word vocabulary, so unseen words decompose into pieces
+instead of silently becoming padding. HF `feature_cache/` and `checkpoints/` belong
+to the probe variant.
 
 ## Reproduce
 

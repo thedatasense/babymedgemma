@@ -1,0 +1,174 @@
+{
+  "baseline": {
+    "native": {
+      "accuracy": 0.8752834467120182,
+      "accuracy_vision_ablated": 0.6787603930461074,
+      "grounding_gap": 0.19652305366591083,
+      "flip_rate": 0.08225108225108226
+    },
+    "nih": {
+      "acc_all": 0.5102086107412339,
+      "acc_originals": 0.5106524633821571,
+      "frac_yes_originals": 0.36684420772303594,
+      "flip_rate": 0.20206391478029295,
+      "per_finding": {
+        "Is there atelectasis?": {
+          "acc": 0.5,
+          "frac_yes": 1.0,
+          "n": 240
+        },
+        "Is there cardiomegaly?": {
+          "acc": 0.5,
+          "frac_yes": 1.0,
+          "n": 240
+        },
+        "Is there consolidation?": {
+          "acc": 0.5041666666666667,
+          "frac_yes": 0.14583333333333334,
+          "n": 240
+        },
+        "Is there edema?": {
+          "acc": 0.5444444444444444,
+          "frac_yes": 0.5444444444444444,
+          "n": 180
+        },
+        "Is there emphysema?": {
+          "acc": 0.5166666666666667,
+          "frac_yes": 0.041666666666666664,
+          "n": 240
+        },
+        "Is there fibrosis?": {
+          "acc": 0.5833333333333334,
+          "frac_yes": 0.5833333333333334,
+          "n": 240
+        },
+        "Is there hernia?": {
+          "acc": 0.48148148148148145,
+          "frac_yes": 0.018518518518518517,
+          "n": 54
+        },
+        "Is there infiltrates?": {
+          "acc": 0.49166666666666664,
+          "frac_yes": 0.6333333333333333,
+          "n": 240
+        },
+        "Is there mass?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there nodule?": {
+          "acc": 0.5041666666666667,
+          "frac_yes": 0.10416666666666667,
+          "n": 240
+        },
+        "Is there pleural effusion?": {
+          "acc": 0.5625,
+          "frac_yes": 0.4041666666666667,
+          "n": 240
+        },
+        "Is there pleural thickening?": {
+          "acc": 0.45416666666666666,
+          "frac_yes": 0.14583333333333334,
+          "n": 240
+        },
+        "Is there pneumonia?": {
+          "acc": 0.46923076923076923,
+          "frac_yes": 0.18461538461538463,
+          "n": 130
+        },
+        "Is there pneumothorax?": {
+          "acc": 0.5041666666666667,
+          "frac_yes": 0.020833333333333332,
+          "n": 240
+        }
+      }
+    }
+  },
+  "grounded": {
+    "native": {
+      "accuracy": 0.8881330309901738,
+      "accuracy_vision_ablated": 0.8329554043839759,
+      "grounding_gap": 0.05517762660619796,
+      "flip_rate": 0.07792207792207792
+    },
+    "nih": {
+      "acc_all": 0.526520195295162,
+      "acc_originals": 0.5399467376830892,
+      "frac_yes_originals": 0.27030625832223704,
+      "flip_rate": 0.15479360852197072,
+      "per_finding": {
+        "Is there atelectasis?": {
+          "acc": 0.5041666666666667,
+          "frac_yes": 0.9958333333333333,
+          "n": 240
+        },
+        "Is there cardiomegaly?": {
+          "acc": 0.5041666666666667,
+          "frac_yes": 0.9708333333333333,
+          "n": 240
+        },
+        "Is there consolidation?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there edema?": {
+          "acc": 0.6222222222222222,
+          "frac_yes": 0.45555555555555555,
+          "n": 180
+        },
+        "Is there emphysema?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there fibrosis?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there hernia?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 54
+        },
+        "Is there infiltrates?": {
+          "acc": 0.6208333333333333,
+          "frac_yes": 0.4375,
+          "n": 240
+        },
+        "Is there mass?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there nodule?": {
+          "acc": 0.5833333333333334,
+          "frac_yes": 0.2833333333333333,
+          "n": 240
+        },
+        "Is there pleural effusion?": {
+          "acc": 0.6958333333333333,
+          "frac_yes": 0.3541666666666667,
+          "n": 240
+        },
+        "Is there pleural thickening?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        },
+        "Is there pneumonia?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 130
+        },
+        "Is there pneumothorax?": {
+          "acc": 0.5,
+          "frac_yes": 0.0,
+          "n": 240
+        }
+      }
+    }
+  }
+}

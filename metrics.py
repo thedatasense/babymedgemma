@@ -21,9 +21,13 @@ def predict(model, dataset, device, batch_size=256, zero_vision=False):
     preds, answers, clusters, phen = [], [], [], []
     for b in loader:
         vis = b["vision"].to(device)
+        gnd = b["ground"].to(device) if "ground" in b else None
         if zero_vision:
             vis = torch.zeros_like(vis)
-        logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device))
+            if gnd is not None:
+                gnd = torch.zeros_like(gnd)   # ablate the grounding token too
+        kw = {"ground": gnd} if getattr(model, "use_ground", False) else {}
+        logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device), **kw)
         preds.extend(logits.argmax(-1).cpu().tolist())
         answers.extend(b["answer"].tolist())
         clusters.extend(b["cluster_id"].tolist())
@@ -58,8 +62,9 @@ def layerwise_dispersion(model, dataset, device, batch_size=256):
     per_layer = defaultdict(lambda: defaultdict(list))
     for b in loader:
         idx = (b["ans_pos"] + model.n_img).to(device)
+        kw = {"ground": b["ground"].to(device)} if getattr(model, "use_ground", False) else {}
         _, acts = model(b["vision"].to(device), b["tokens"].to(device),
-                        b["ans_pos"].to(device), capture=True)
+                        b["ans_pos"].to(device), capture=True, **kw)
         B = b["tokens"].shape[0]
         for li, h in enumerate(acts):
             vecs = h[torch.arange(B, device=device), idx].cpu().numpy()

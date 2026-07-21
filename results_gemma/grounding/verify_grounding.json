@@ -1,0 +1,197 @@
+[
+  {
+    "seed": 0,
+    "baseline": {
+      "acc": 0.5003328894806924,
+      "flip": 0.10086551264980026,
+      "frac_yes": 0.2966045272969374
+    },
+    "grounded_real": {
+      "acc": 0.5392809587217043,
+      "flip": 0.15545938748335553,
+      "frac_yes": 0.27097203728362185
+    },
+    "per_finding_real": {
+      "Is there atelectasis?": 0.5041666666666667,
+      "Is there cardiomegaly?": 0.5041666666666667,
+      "Is there consolidation?": 0.5,
+      "Is there edema?": 0.6222222222222222,
+      "Is there emphysema?": 0.5,
+      "Is there fibrosis?": 0.5,
+      "Is there hernia?": 0.5,
+      "Is there infiltrates?": 0.6125,
+      "Is there mass?": 0.5,
+      "Is there nodule?": 0.5833333333333334,
+      "Is there pleural effusion?": 0.6958333333333333,
+      "Is there pleural thickening?": 0.5,
+      "Is there pneumonia?": 0.5,
+      "Is there pneumothorax?": 0.5
+    },
+    "grounded_zero": {
+      "acc": 0.4973368841544607,
+      "flip": 0.29727030625832224,
+      "frac_yes": 0.4533954727030626
+    },
+    "grounded_shuffle": {
+      "acc": 0.5322902796271638,
+      "flip": 0.31091877496671105,
+      "frac_yes": 0.26398135818908125
+    }
+  },
+  {
+    "seed": 1,
+    "baseline": {
+      "acc": 0.4993342210386152,
+      "flip": 0.4830226364846871,
+      "frac_yes": 0.2403462050599201
+    },
+    "grounded_real": {
+      "acc": 0.5429427430093209,
+      "flip": 0.4214380825565912,
+      "frac_yes": 0.3418774966711052
+    },
+    "per_finding_real": {
+      "Is there atelectasis?": 0.5,
+      "Is there cardiomegaly?": 0.5708333333333333,
+      "Is there consolidation?": 0.5625,
+      "Is there edema?": 0.5611111111111111,
+      "Is there emphysema?": 0.5208333333333334,
+      "Is there fibrosis?": 0.4791666666666667,
+      "Is there hernia?": 0.4074074074074074,
+      "Is there infiltrates?": 0.5541666666666667,
+      "Is there mass?": 0.5416666666666666,
+      "Is there nodule?": 0.5,
+      "Is there pleural effusion?": 0.6916666666666667,
+      "Is there pleural thickening?": 0.5916666666666667,
+      "Is there pneumonia?": 0.5,
+      "Is there pneumothorax?": 0.5
+    },
+    "grounded_zero": {
+      "acc": 0.5,
+      "flip": 0.5988681757656458,
+      "frac_yes": 0.8768308921438083
+    },
+    "grounded_shuffle": {
+      "acc": 0.534953395472703,
+      "flip": 0.6857523302263648,
+      "frac_yes": 0.3478695073235686
+    }
+  },
+  {
+    "seed": 2,
+    "baseline": {
+      "acc": 0.49900133155792276,
+      "flip": 0.12316910785619174,
+      "frac_yes": 0.4770306258322237
+    },
+    "grounded_real": {
+      "acc": 0.5306258322237017,
+      "flip": 0.12583222370173103,
+      "frac_yes": 0.3015978695073236
+    },
+    "per_finding_real": {
+      "Is there atelectasis?": 0.5041666666666667,
+      "Is there cardiomegaly?": 0.5125,
+      "Is there consolidation?": 0.5208333333333334,
+      "Is there edema?": 0.5,
+      "Is there emphysema?": 0.5666666666666667,
+      "Is there fibrosis?": 0.5416666666666666,
+      "Is there hernia?": 0.5,
+      "Is there infiltrates?": 0.5333333333333333,
+      "Is there mass?": 0.5083333333333333,
+      "Is there nodule?": 0.5416666666666666,
+      "Is there pleural effusion?": 0.6083333333333333,
+      "Is there pleural thickening?": 0.5208333333333334,
+      "Is there pneumonia?": 0.5615384615384615,
+      "Is there pneumothorax?": 0.49166666666666664
+    },
+    "grounded_zero": {
+      "acc": 0.5,
+      "flip": 0.09187749667110519,
+      "frac_yes": 0.9201065246338216
+    },
+    "grounded_shuffle": {
+      "acc": 0.5279627163781625,
+      "flip": 0.5729027962716379,
+      "frac_yes": 0.30958721704394143
+    }
+  },
+  {
+    "seed": 3,
+    "baseline": {
+      "acc": 0.5066577896138482,
+      "flip": 0.40179760319573904,
+      "frac_yes": 0.46937416777629826
+    },
+    "grounded_real": {
+      "acc": 0.5099866844207723,
+      "flip": 0.5416111850865513,
+      "frac_yes": 0.26764314247669774
+    },
+    "per_finding_real": {
+      "Is there atelectasis?": 0.5083333333333333,
+      "Is there cardiomegaly?": 0.5083333333333333,
+      "Is there consolidation?": 0.5,
+      "Is there edema?": 0.5222222222222223,
+      "Is there emphysema?": 0.49583333333333335,
+      "Is there fibrosis?": 0.4708333333333333,
+      "Is there hernia?": 0.5,
+      "Is there infiltrates?": 0.55,
+      "Is there mass?": 0.5,
+      "Is there nodule?": 0.5041666666666667,
+      "Is there pleural effusion?": 0.5125,
+      "Is there pleural thickening?": 0.5583333333333333,
+      "Is there pneumonia?": 0.5,
+      "Is there pneumothorax?": 0.5
+    },
+    "grounded_zero": {
+      "acc": 0.5003328894806924,
+      "flip": 0.6984021304926764,
+      "frac_yes": 0.3891478029294274
+    },
+    "grounded_shuffle": {
+      "acc": 0.507323568575233,
+      "flip": 0.6131824234354194,
+      "frac_yes": 0.26897470039946736
+    }
+  },
+  {
+    "seed": 4,
+    "baseline": {
+      "acc": 0.5006657789613849,
+      "flip": 0.2197070572569907,
+      "frac_yes": 0.21238348868175766
+    },
+    "grounded_real": {
+      "acc": 0.5056591211717709,
+      "flip": 0.11651131824234354,
+      "frac_yes": 0.2300266311584554
+    },
+    "per_finding_real": {
+      "Is there atelectasis?": 0.5,
+      "Is there cardiomegaly?": 0.5,
+      "Is there consolidation?": 0.5,
+      "Is there edema?": 0.55,
+      "Is there emphysema?": 0.5,
+      "Is there fibrosis?": 0.5041666666666667,
+      "Is there hernia?": 0.5,
+      "Is there infiltrates?": 0.525,
+      "Is there mass?": 0.5,
+      "Is there nodule?": 0.49583333333333335,
+      "Is there pleural effusion?": 0.5125,
+      "Is there pleural thickening?": 0.49583333333333335,
+      "Is there pneumonia?": 0.5,
+      "Is there pneumothorax?": 0.5
+    },
+    "grounded_zero": {
+      "acc": 0.5063249001331558,
+      "flip": 0.12683089214380824,
+      "frac_yes": 0.2433422103861518
+    },
+    "grounded_shuffle": {
+      "acc": 0.5063249001331558,
+      "flip": 0.1151797603195739,
+      "frac_yes": 0.2306924101198402
+    }
+  }
+]

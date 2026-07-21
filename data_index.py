@@ -99,6 +99,12 @@ def load_padchest() -> list[dict]:
 
 
 def build_index() -> list[dict]:
+    # explicit index wins (NANO_INDEX=data/index_scaled.json for the scaled run),
+    # so the 1,841-question experiments stay reproducible untouched
+    override = os.environ.get("NANO_INDEX")
+    if override:
+        idx = json.load(open(override))
+        return [r for r in idx if r.get("question")]
     # prefer the expanded 10k index (PadChest label-derived + MIMIC) if built
     expanded = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "index_10k.json")
     if os.path.exists(expanded):

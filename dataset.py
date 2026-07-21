@@ -38,16 +38,29 @@ ADV_YES = {"lexical_substitution", "specificity_modulation"}
 ADV_NO = {"scope_quantification", "syntactic_restructuring"}
 
 _WORD = re.compile(r"[a-z0-9]+")
-_FEATS = None  # cache singleton
+_FEATS = None   # cache singleton
+_POOLED = None  # MedSigLIP attention-pooled embedding (the grounding token)
 
 
 def load_feature_cache(path=None):
     global _FEATS
     if _FEATS is None:
-        path = path or os.path.join(HERE, "cache", "medsiglip_feats.pt")
+        path = path or os.environ.get("NANO_FEATS") or os.path.join(HERE, "cache", "medsiglip_feats.pt")
         d = torch.load(path, map_location="cpu")
         _FEATS = {"index": {p: i for i, p in enumerate(d["paths"])}, "feats": d["feats"]}
     return _FEATS
+
+
+def load_pooled_cache(path=None):
+    """MedSigLIP's trained-pooling-head embedding per image, or None if not cached."""
+    global _POOLED
+    if _POOLED is None:
+        path = path or os.environ.get("NANO_POOLED") or os.path.join(HERE, "cache", "medsiglip_pooled.pt")
+        if not os.path.exists(path):
+            return None
+        d = torch.load(path, map_location="cpu")
+        _POOLED = {"index": {p: i for i, p in enumerate(d["paths"])}, "pooled": d["pooled"]}
+    return _POOLED
 
 
 def tokenize_words(text: str) -> list[str]:
@@ -81,8 +94,13 @@ class Tokenizer:
         return ids, ans_pos
 
 
-def build_tokenizer(index=None, max_len=32) -> Tokenizer:
+def build_tokenizer(index=None, max_len=32):
+    """MedGemma's pruned SentencePiece tokenizer when NANO_GEMMA_TOK=1, else the
+    legacy word-level one (kept so the validated 1,841-question runs reproduce)."""
     index = index or build_index()
+    if os.environ.get("NANO_GEMMA_TOK"):
+        from gemma_tokenizer import build_gemma_tokenizer
+        return build_gemma_tokenizer(index, max_len=int(os.environ.get("NANO_MAXLEN", "48")))
     corpus = []
     for r in index:
         corpus.append(r["question"])
@@ -121,7 +139,11 @@ def make_training_examples(index, regime, seed, balance=True, adv_strength=0.9) 
             examples.append(Ex(r["image_path"], r["question"], ans, "original", cid))
         elif regime == "augmented":
             examples.append(Ex(r["image_path"], r["question"], ans, "original", cid))
-            for p in paras:
+            # with a large bank (48/question) keep every phrasing reachable but sample
+            # per question per epoch, so coverage stays broad without a 4M-example epoch
+            k = int(os.environ.get("NANO_PARA_SAMPLE", "0"))
+            chosen_paras = rng.sample(paras, min(k, len(paras))) if k else paras
+            for p in chosen_paras:
                 examples.append(Ex(r["image_path"], p["text"], ans, p.get("phenomenon"), cid))
         elif regime == "adversarial":
             want = ADV_YES if ans == "yes" else ADV_NO
@@ -149,10 +171,13 @@ def make_eval_clusters(index, split="test") -> list[Ex]:
 
 
 class NanoDataset(Dataset):
-    def __init__(self, examples: list[Ex], tok: Tokenizer, feats=None):
+    def __init__(self, examples: list[Ex], tok: Tokenizer, feats=None, pooled=None):
         self.examples = examples
         self.tok = tok
         self.fc = feats or load_feature_cache()
+        # the grounding token: MedSigLIP's attention-pooled embedding, if cached
+        self.pc = pooled if pooled is not None else load_pooled_cache()
+        self.ground_dim = self.pc["pooled"].shape[1] if self.pc else 1
 
     def __len__(self):
         return len(self.examples)
@@ -162,9 +187,16 @@ class NanoDataset(Dataset):
         fidx = self.fc["index"].get(e.image_path)
         feat = self.fc["feats"][fidx].float() if fidx is not None else \
             torch.zeros(256, 1152)
+        if self.pc:
+            gidx = self.pc["index"].get(e.image_path)
+            ground = self.pc["pooled"][gidx].float() if gidx is not None else \
+                torch.zeros(self.ground_dim)
+        else:
+            ground = torch.zeros(1)
         ids, ans_pos = self.tok.encode(e.text)
         return {
             "vision": feat,
+            "ground": ground,
             "tokens": torch.tensor(ids, dtype=torch.long),
             "ans_pos": ans_pos,
             "answer": ANSWER_STOI[e.answer],
@@ -176,6 +208,7 @@ class NanoDataset(Dataset):
 def collate(batch):
     return {
         "vision": torch.stack([b["vision"] for b in batch]),
+        "ground": torch.stack([b["ground"] for b in batch]),
         "tokens": torch.stack([b["tokens"] for b in batch]),
         "ans_pos": torch.tensor([b["ans_pos"] for b in batch], dtype=torch.long),
         "answer": torch.tensor([b["answer"] for b in batch], dtype=torch.long),

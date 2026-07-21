@@ -51,7 +51,7 @@ def _apply_vision_dropout(vision, p, gen):
 
 def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
                 depth=6, dim=384, fusion="prefix", arch="nano", vision_dropout=0.0,
-                device=None, verbose=True):
+                device=None, verbose=True, use_ground=False):
     device = device or ("cuda" if torch.cuda.is_available() else "cpu")
     set_seed(seed)
 
@@ -59,9 +59,19 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     tok = build_tokenizer(index)
     feats = load_feature_cache()
     if arch == "gemma":
+        from dataset import load_pooled_cache
         from gemma_model import BabyGemmaVLM
+        pc = load_pooled_cache() if use_ground else None
+        if use_ground and pc is None:
+            raise SystemExit("--grounding-token needs cache/medsiglip_pooled.pt "
+                             "(run precompute_pooled.py)")
+        # position embeddings must cover 256 image tokens + optional grounding token
+        # + the tokenizer's max_len, so take max_len from the tokenizer, not the default
         model = BabyGemmaVLM(vocab_size=len(tok), dim=dim, depth=depth,
-                             yes_id=tok.stoi["yes"], no_id=tok.stoi["no"]).to(device)
+                             max_len=getattr(tok, "max_len", 32),
+                             yes_id=tok.stoi["yes"], no_id=tok.stoi["no"],
+                             use_ground=use_ground,
+                             ground_dim=pc["pooled"].shape[1] if pc else 1152).to(device)
     else:
         cfg = NanoVLMConfig(vocab_size=len(tok), depth=depth, dim=dim, heads=max(1, dim // 64), fusion=fusion)
         model = NanoVLM(cfg).to(device)
@@ -76,7 +86,7 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     val_ds = NanoDataset(val_ex, tok, feats)
 
     train_ex = make_training_examples(index, regime, seed=seed)
-    eval_ex = make_eval_clusters(index, split="test")
+    eval_ex = make_eval_clusters(index, split=os.environ.get("NANO_EVAL_SPLIT", "test"))
     train_ds = NanoDataset(train_ex, tok, feats)
     eval_ds = NanoDataset(eval_ex, tok, feats)
 
@@ -86,8 +96,10 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     lossf = torch.nn.CrossEntropyLoss()
 
     # early stopping on validation accuracy -> stops before the model memorizes
-    # text->answer and loses image grounding
-    eval_every, patience = 75, 4
+    # text->answer and loses image grounding. Defaults suit the 1,841-question set;
+    # the scaled set needs a longer leash or it stops inside the first epoch.
+    eval_every = int(os.environ.get("NANO_EVAL_EVERY", "75"))
+    patience = int(os.environ.get("NANO_PATIENCE", "4"))
     best_acc, best_state, bad, best_step = -1.0, None, 0, 0
 
     vgen = torch.Generator(device=device).manual_seed(seed)
@@ -96,7 +108,8 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     while not done:
         for b in loader:
             vis = _apply_vision_dropout(b["vision"].to(device), vision_dropout, vgen)
-            logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device))
+            kw = {"ground": b["ground"].to(device)} if use_ground else {}
+            logits, _ = model(vis, b["tokens"].to(device), b["ans_pos"].to(device), **kw)
             loss = lossf(logits, b["answer"].to(device))
             opt.zero_grad()
             loss.backward()
@@ -129,7 +142,7 @@ def train_model(regime="augmented", seed=0, steps=1500, batch_size=128, lr=3e-4,
     result = {
         "regime": regime, "seed": seed, "steps": steps, "depth": depth,
         "early_stop_step": best_step, "val_acc": best_acc,
-        "vision_dropout": vision_dropout,
+        "vision_dropout": vision_dropout, "use_ground": use_ground,
         "n_train": len(train_ex), "n_eval_clusters": len(set(clusters)),
         "trainable_params": n_params(model),
         "accuracy": acc, "accuracy_vision_ablated": acc_ni, "grounding_gap": acc - acc_ni,
@@ -154,11 +167,14 @@ def main():
     ap.add_argument("--fusion", default="prefix", choices=["prefix", "cross"])
     ap.add_argument("--arch", default="nano", choices=["nano", "gemma"])
     ap.add_argument("--vision-dropout", type=float, default=0.0)
+    ap.add_argument("--grounding-token", action="store_true",
+                    help="prepend MedSigLIP's attention-pooled embedding as a grounding token")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
     art = train_model(regime=args.regime, seed=args.seed, steps=args.steps,
                       batch_size=args.batch_size, lr=args.lr, depth=args.depth, dim=args.dim,
-                      fusion=args.fusion, arch=args.arch, vision_dropout=args.vision_dropout)
+                      fusion=args.fusion, arch=args.arch, vision_dropout=args.vision_dropout,
+                      use_ground=args.grounding_token)
     if args.out:
         os.makedirs(args.out, exist_ok=True)
         torch.save(art["model"].state_dict(), os.path.join(args.out, "model.pt"))

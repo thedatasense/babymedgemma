@@ -22,7 +22,7 @@ import torch.nn as nn
 
 class BabyGemmaVLM(nn.Module):
     def __init__(self, vocab_size, dim=384, depth=6, n_img=256, max_len=32, vision_dim=1152,
-                 yes_id=None, no_id=None):
+                 yes_id=None, no_id=None, use_ground=False, ground_dim=1152):
         super().__init__()
         from transformers import Gemma3TextConfig, Gemma3TextModel
         seq = n_img + max_len
@@ -49,16 +49,31 @@ class BabyGemmaVLM(nn.Module):
         # matching how MedGemma decides yes/no. Defaults to the last two vocab ids.
         self.no_id = no_id if no_id is not None else vocab_size - 2
         self.yes_id = yes_id if yes_id is not None else vocab_size - 1
-        self.n_img = n_img
-        self.ans_offset = n_img
+        # optional grounding token: MedSigLIP's attention-pooled embedding, projected
+        # and prepended before the patch tokens. The patch tokens alone do not hand
+        # the finding signal to a decoder this small (naive readout of them is at
+        # chance), so this gives it the signal the encoder actually has.
+        self.use_ground = use_ground
+        if use_ground:
+            self.gproj = nn.Sequential(nn.LayerNorm(ground_dim), nn.Linear(ground_dim, dim))
+        self.n_patch = n_img
+        self.n_img = n_img + (1 if use_ground else 0)   # prefix length / ANS offset
+        self.ans_offset = self.n_img
         self.cfg = SimpleNamespace(dim=dim, depth=depth, fusion="gemma_prefix",
-                                   max_len=max_len, n_img=n_img)
+                                   max_len=max_len, n_img=self.n_img)
 
-    def forward(self, vision, tokens, ans_pos, capture=False, patch=None):
+    def forward(self, vision, tokens, ans_pos, capture=False, patch=None, ground=None):
         B = vision.shape[0]
         img = self.vproj(vision)                                   # [B, 256, dim]
         txt = self.gemma.get_input_embeddings()(tokens)            # [B, T, dim]
-        inp = torch.cat([img, txt], dim=1)                         # prefix fusion
+        parts = []
+        if self.use_ground:
+            if ground is None:
+                ground = torch.zeros(B, self.gproj[0].normalized_shape[0],
+                                     device=vision.device, dtype=vision.dtype)
+            parts.append(self.gproj(ground).unsqueeze(1))          # [B, 1, dim]
+        parts += [img, txt]
+        inp = torch.cat(parts, dim=1)                              # prefix fusion
         ans_idx = ans_pos + self.n_img
 
         handle = None

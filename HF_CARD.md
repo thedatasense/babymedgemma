@@ -12,51 +12,58 @@ tags:
   - research
 base_model:
   - google/medsiglip-448
-  - google/gemma-3-4b-it
+  - google/medgemma-4b-it
 pipeline_tag: visual-question-answering
 ---
 
 # baby-MedGemma
 
-A small, **MedGemma-faithful probe** for causally isolating *where paraphrase
-sensitivity in medical vision-language models originates*. It pairs a frozen
-`google/medsiglip-448` encoder (run at 896 pixels, the MedGemma resolution) with a
-small trained **Gemma-3** decoder, so a mechanism found here transfers to
-MedGemma-4B, while letting the one experiment the frozen deployed model cannot
-support run: **varying the training-phrasing distribution one factor at a time.**
+A small, **MedGemma-faithful** chest-X-ray model: a frozen `google/medsiglip-448`
+encoder run at 896 pixels feeding a compact **Gemma-3** decoder, with the yes/no
+answer read from the tied language-model head. Built to study *where paraphrase
+sensitivity in medical vision-language models originates*.
 
-- Code, five-experiment write-up, and figures: **[github.com/thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma)**
+- Code and the full experiment write-up: **[github.com/thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma)**
 - Interactive write-up: **[bineshkumar.me/phd-thesis/causality](https://bineshkumar.me/phd-thesis/causality/)**
 
-> **Scope.** A controlled research probe, **not a general medical VQA model**. It
-> has a 734-word domain vocabulary (chest-X-ray presence questions plus the yes/no
-> answer tokens) and grounds weakly, so it is loadable and runnable for inspection
-> and reproduction only. It supports a *sufficiency* claim about the cause of
-> paraphrase sensitivity, not proof that the deployed MedGemma-4B has this exact
-> origin. Not a medical device; not for clinical use.
+> **Scope.** A research probe, **not a clinical model**. It answers binary presence
+> questions about 14 chest findings. Not a medical device; not for clinical use.
 
-## Fidelity to MedGemma-1.5
+## Two variants
 
-Matched to the deployment stack ([arXiv:2604.05081](https://arxiv.org/pdf/2604.05081)):
-frozen MedSigLIP encoder, 896-pixel input, 256 image tokens, image tokens
-projected and prepended inline, a Gemma-3 decoder (rotary position embeddings,
-RMSNorm, grouped-query attention, GeGLU, QK-norm), and the yes/no decision read
-from the tied Gemma-3 LM head. Simplified on purpose for the experiment: 13.9M
-decoder parameters trained from scratch, supervised training, and a 734-word
-closed vocabulary, so the training-phrasing distribution becomes a controllable
-input rather than a frozen prior.
+| | default (this repo root) | `probe-1841/` |
+|---|---|---|
+| Purpose | grounded model that **transfers to unseen hospitals** | the **controlled probe** behind the dissertation's causal experiments |
+| Training data | 107k per-finding-balanced questions (NIH + PadChest) | 1,841 questions (MIMIC-CXR + PadChest) |
+| Tokenizer | MedGemma SentencePiece, pruned to 141 pieces | word-level, 734 words |
+| Paraphrases | 48 templates across 4 phenomena | 4.8 generated per question |
+| Grounding token | yes (MedSigLIP pooled embedding) | no |
 
-## What it establishes
+**Use `probe-1841/` to reproduce the dissertation's Section 5.5 numbers** (augmentation
+lever 29.5% -> 9.5%, rank-1 causal patching). Those results are specific to that
+training distribution and do not transfer to the default weights.
 
-| | Result |
-|---|---|
-| Cause (data provenance) | Paraphrase augmentation cuts the flip rate from 29.5% (one fixed phrasing) to 9.5% (every paraphrase), Cliff's delta = 1.00, 16 seeds |
-| Mechanism (causal patching) | A single rank-1, language-side direction in the early layers restores flipped answers (net recovery near 1.0); random and non-flip controls do nothing |
-| Corroboration | An unsupervised sparse-autoencoder feature recovers that direction (\|cosine\| 0.74, ahead of principal-component analysis at 0.52); a Jacobian lens separates flipping from stable paraphrases (8.9x, from layer 0) |
-| Ruled out | Decoder depth (flip rate 9.1% to 10.2% across depths 2 to 8) and weak grounding (inconclusive) |
+## What the default model does
 
-The bundled weights are the **augmented seed-0** checkpoint (88.5% native accuracy,
-8.2% flip rate).
+Trained on NIH + PadChest, evaluated on **MIMIC and VinDr held out entirely** (no
+image, and no hospital, seen in training). Every split is balanced per finding, so a
+text-only model scores exactly 0.500 and all accuracy above that is visual.
+
+| split | n | accuracy | AUC | text-only floor | flip rate |
+|---|---|---|---|---|---|
+| in-distribution (held-out images) | 15,112 | 0.748 | 0.827 | 0.500 | 0.061 |
+| **MIMIC (unseen hospital)** | 450 | 0.671 | **0.743** | 0.500 | 0.049 |
+| **VinDr (unseen hospital)** | 5,478 | 0.686 | **0.756** | 0.500 | 0.060 |
+
+For reference, MedSigLIP's own zero-shot binary performance on this task is AUC 0.734,
+and an earlier version of this probe scored **AUC 0.500 — indistinguishable from blind
+— on unseen data**. Per finding, pneumothorax transfers essentially unchanged (0.899
+in-distribution vs 0.903 on VinDr); **pleural thickening inverts on VinDr (0.332,
+below chance)**, most likely a label-definition mismatch, and should not be trusted.
+
+Accuracy alone cannot tell a seeing model from a blind one here: a blind model, a
+model given a *shuffled* grounding token, and a genuinely seeing model all score
+~0.50 accuracy while their AUCs are 0.500 / 0.506 / 0.604. Report AUC.
 
 ## Load
 
@@ -66,16 +73,17 @@ from transformers import AutoModel
 from PIL import Image
 
 model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
-input_ids, ans_pos = model.encode_question("is there cardiomegaly ?")
-vision_features = model.encode_images([Image.open("cxr.png").convert("RGB")])  # frozen MedSigLIP at 896px
-logits = model(input_ids=input_ids, vision_features=vision_features, ans_pos=ans_pos).logits
-print(model.config.id2label[int(logits.argmax(-1))])   # "yes" or "no"
+
+input_ids, ans_pos = model.encode_question("is there pleural effusion?")
+vision_features, ground = model.encode_images([Image.open("cxr.png").convert("RGB")])
+logits = model(input_ids=input_ids, vision_features=vision_features,
+               ground=ground, ans_pos=ans_pos).logits
+print(model.config.id2label[int(logits.argmax(-1))])      # "yes" or "no"
 ```
 
-`encode_images` needs gated access to `google/medsiglip-448`. The precomputed
-896-pixel feature cache (`feature_cache/medsiglip_feats.pt`) and the per-run
-`BabyGemmaVLM` checkpoints (`checkpoints/`) are in this repo; the code to
-reproduce every experiment is on GitHub.
+The dissertation probe loads the same way with `subfolder="probe-1841"` (it takes no
+`ground` argument). `encode_images` needs gated access to `google/medsiglip-448`.
+`feature_cache/` and `checkpoints/` in this repo belong to the **probe** variant.
 
 ## Citation
 
