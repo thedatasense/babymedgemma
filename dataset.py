@@ -141,6 +141,8 @@ def make_training_examples(index, regime, seed, balance=True, adv_strength=0.9) 
             examples.append(Ex(r["image_path"], r["question"], ans, "original", cid))
             # with a large bank (48/question) keep every phrasing reachable but sample
             # per question per epoch, so coverage stays broad without a 4M-example epoch
+            if os.environ.get("NANO_PARA_HELDOUT"):
+                paras = [p for p in paras if p.get("para_split", "train") == "train"]
             k = int(os.environ.get("NANO_PARA_SAMPLE", "0"))
             chosen_paras = rng.sample(paras, min(k, len(paras))) if k else paras
             for p in chosen_paras:
@@ -160,12 +162,19 @@ def make_training_examples(index, regime, seed, balance=True, adv_strength=0.9) 
     return examples
 
 
-def make_eval_clusters(index, split="test") -> list[Ex]:
+def make_eval_clusters(index, split="test", max_clusters=None) -> list[Ex]:
     rows = [r for r in index if r["split"] == split]
+    max_clusters = max_clusters or int(os.environ.get("NANO_EVAL_MAX", "0"))
+    if max_clusters and len(rows) > max_clusters:
+        rows = random.Random(0).sample(rows, max_clusters)
+    heldout = bool(os.environ.get("NANO_PARA_HELDOUT"))
     examples: list[Ex] = []
     for cid, r in enumerate(rows):
         examples.append(Ex(r["image_path"], r["question"], r["answer"], "original", cid))
         for p in r["paraphrases"]:
+            # held-out mode scores ONLY phrasings never seen in training
+            if heldout and p.get("para_split", "train") != "heldout":
+                continue
             examples.append(Ex(r["image_path"], p["text"], r["answer"], p.get("phenomenon"), cid))
     return examples
 

@@ -43,7 +43,7 @@ def build_jobs():
             args += ["--arch", ARCH]
         if os.environ.get("NANO_LR") and script == "train.py":
             args += ["--lr", os.environ["NANO_LR"]]
-        if os.environ.get("NANO_GROUND") and script == "train.py":
+        if os.environ.get("NANO_GROUND") and script in ("train.py", "experiment_a.py", "experiment_e.py"):
             args += ["--grounding-token"]
         args += ["--out", outdir]
         jobs.append({"tag": tag, "args": args, "outdir": outdir, "result": result})

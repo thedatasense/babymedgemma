@@ -19,3 +19,14 @@ data/index_10k.json*
 hf_model/
 hf_export/
 _hf_upload.py
+
+# Generated index files (regenerable via build_*_index.py; index_transfer is 611 MB)
+data/index_*.json
+data/index_*.json.bak
+
+# transformers build output for the scaled model (weights on HF)
+hf_export_v2/
+
+# scratch scripts and chain drivers
+_*.py
+_*.sh

@@ -91,10 +91,22 @@ OPERATOR_VARIANTS = {
 }
 
 
+HELDOUT_FROM = 6   # first 6 of each phenomenon train, last 6 are never trained on
+
+
 def paraphrases_for(phrase: str) -> list[dict]:
-    """Meaning-preserving paraphrases, answer unchanged."""
-    return [{"text": t.format(f=phrase), "phenomenon": phen}
-            for phen, ts in PARAPHRASES.items() for t in ts]
+    """Meaning-preserving paraphrases, answer unchanged.
+
+    Each is tagged para_split=train|heldout so a run can train on one half of the
+    phrasings and be evaluated only on wording it has never seen. Flip rate measured
+    on phrasings that were in training partly reflects memorising the template set;
+    the held-out half measures whether coverage generalises."""
+    out = []
+    for phen, ts in PARAPHRASES.items():
+        for i, t in enumerate(ts):
+            out.append({"text": t.format(f=phrase), "phenomenon": phen,
+                        "para_split": "train" if i < HELDOUT_FROM else "heldout"})
+    return out
 
 
 def operator_variants_for(phrase: str) -> list[dict]:

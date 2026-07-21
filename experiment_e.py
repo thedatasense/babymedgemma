@@ -29,23 +29,25 @@ def _one(ds, i, device):
     it = ds[i]
     return (it["vision"].unsqueeze(0).to(device),
             it["tokens"].unsqueeze(0).to(device),
-            torch.tensor([it["ans_pos"]], device=device))
+            torch.tensor([it["ans_pos"]], device=device),
+            it["ground"].unsqueeze(0).to(device))
 
 
 @torch.no_grad()
-def _patch_pred(model, vis, tok, ap, layer, donor_vec, ai_t, basis=None):
+def _patch_pred(model, vis, tok, ap, layer, donor_vec, ai_t, basis=None, ground=None):
     seq = model.n_img + model.cfg.max_len
     donor = torch.zeros(1, seq, model.cfg.dim, device=vis.device)
     donor[0, ai_t] = donor_vec
     spec = {"layer": layer, "donor": donor, "positions": "ans"}
     if basis is not None:
         spec["basis"] = basis
-    logits, _ = model(vis, tok, ap, patch=spec)
+    kw = {"ground": ground} if getattr(model, "use_ground", False) else {}
+    logits, _ = model(vis, tok, ap, patch=spec, **kw)
     return int(logits.argmax(-1))
 
 
-def run(steps, seed, regime, max_clusters, out, arch="nano"):
-    art = train_model(regime=regime, seed=seed, steps=steps, arch=arch)
+def run(steps, seed, regime, max_clusters, out, arch="nano", use_ground=False):
+    art = train_model(regime=regime, seed=seed, steps=steps, arch=arch, use_ground=use_ground)
     model, ds, device = art["model"], art["eval_ds"], art["device"]
     model.eval()
     depth = model.cfg.depth
@@ -65,10 +67,12 @@ def run(steps, seed, regime, max_clusters, out, arch="nano"):
                 maj = Counter(cps).most_common(1)[0][0]
                 di = next(i for i in idxs if preds[i] == maj)
                 ti = next(i for i in idxs if preds[i] != maj)
-                vd, td, ad = _one(ds, di, device)
-                vt, tt, at = _one(ds, ti, device)
-                _, acts_d = model(vd, td, ad, capture=True)
-                _, acts_t = model(vt, tt, at, capture=True)
+                vd, td, ad, gd = _one(ds, di, device)
+                vt, tt, at, gt = _one(ds, ti, device)
+                kwd = {"ground": gd} if use_ground else {}
+                kwt = {"ground": gt} if use_ground else {}
+                _, acts_d = model(vd, td, ad, capture=True, **kwd)
+                _, acts_t = model(vt, tt, at, capture=True, **kwt)
                 ai_d = int(ad.item()) + model.n_img
                 ai_t = int(at.item()) + model.n_img
                 for L in range(depth):
@@ -77,22 +81,23 @@ def run(steps, seed, regime, max_clusters, out, arch="nano"):
                     diff = dvec - tvec
                     if diff.norm() > 1e-6:
                         b = (diff / diff.norm()).unsqueeze(0)
-                        if _patch_pred(model, vt, tt, at, L, dvec, ai_t, basis=b) == maj:
+                        if _patch_pred(model, vt, tt, at, L, dvec, ai_t, basis=b, ground=gt) == maj:
                             rec[L] += 1
                     rb = torch.randn(model.cfg.dim, device=device)
                     rb = (rb / rb.norm()).unsqueeze(0)
-                    if _patch_pred(model, vt, tt, at, L, dvec, ai_t, basis=rb) == maj:
+                    if _patch_pred(model, vt, tt, at, L, dvec, ai_t, basis=rb, ground=gt) == maj:
                         ctl[L] += 1
                 ntar += 1
             elif len(set(cps)) == 1 and nnf < max_clusters and len(idxs) >= 2:
                 same = cps[0]
-                vd, td, ad = _one(ds, idxs[0], device)
-                vt, tt, at = _one(ds, idxs[1], device)
-                _, acts_d = model(vd, td, ad, capture=True)
+                vd, td, ad, gd = _one(ds, idxs[0], device)
+                vt, tt, at, gt = _one(ds, idxs[1], device)
+                _, acts_d = model(vd, td, ad, capture=True,
+                                  **({"ground": gd} if use_ground else {}))
                 ai_d = int(ad.item()) + model.n_img
                 ai_t = int(at.item()) + model.n_img
                 for L in range(depth):
-                    if _patch_pred(model, vt, tt, at, L, acts_d[L][0, ai_d], ai_t) != same:
+                    if _patch_pred(model, vt, tt, at, L, acts_d[L][0, ai_d], ai_t, ground=gt) != same:
                         disr[L] += 1
                 nnf += 1
 
@@ -122,9 +127,11 @@ def main():
     ap.add_argument("--regime", default="adversarial")
     ap.add_argument("--max-clusters", type=int, default=60)
     ap.add_argument("--arch", default="nano", choices=["nano", "gemma"])
+    ap.add_argument("--grounding-token", action="store_true")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
-    run(a.steps, a.seed, a.regime, a.max_clusters, a.out, arch=a.arch)
+    run(a.steps, a.seed, a.regime, a.max_clusters, a.out, arch=a.arch,
+        use_ground=a.grounding_token)
 
 
 if __name__ == "__main__":

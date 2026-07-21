@@ -35,8 +35,11 @@ from dataset import (NanoDataset, build_tokenizer, collate, load_feature_cache,
 from gemma_model import BabyGemmaVLM
 
 REGIMES = ["augmented", "canonical", "adversarial"]
-SEEDS = list(range(16))
-OUT = os.path.join(HERE, "results_gemma", "grounding", "flip_threshold_robustness.json")
+SEEDS = list(range(int(os.environ.get("NANO_DISP_SEEDS", "16"))))
+RESULTS_DIR = os.environ.get("NANO_DISP_RESULTS", os.path.join(HERE, "results_gemma", "B"))
+USE_GROUND = bool(os.environ.get("NANO_GROUND"))
+OUT = os.environ.get("NANO_DISP_OUT",
+                     os.path.join(HERE, "results_gemma", "grounding", "flip_threshold_robustness.json"))
 
 
 @torch.no_grad()
@@ -44,7 +47,8 @@ def margins_and_clusters(model, ds):
     model.eval()
     m, c = [], []
     for b in DataLoader(ds, batch_size=256, collate_fn=collate):
-        lg, _ = model(b["vision"].cuda(), b["tokens"].cuda(), b["ans_pos"].cuda())
+        kw = {"ground": b["ground"].cuda()} if USE_GROUND else {}
+        lg, _ = model(b["vision"].cuda(), b["tokens"].cuda(), b["ans_pos"].cuda(), **kw)
         m.append((lg[:, 1] - lg[:, 0]).float().cpu().numpy())
         c += b["cluster_id"].tolist()
     return np.concatenate(m), np.array(c)
@@ -73,7 +77,8 @@ def main():
     tok = build_tokenizer()
     index = build_index()
     feats = load_feature_cache()
-    ds = NanoDataset(make_eval_clusters(index, split="test"), tok, feats)
+    ds = NanoDataset(make_eval_clusters(index,
+                     split=os.environ.get("NANO_EVAL_SPLIT", "test")), tok, feats)
     print(f"[flip] native eval: {len(ds)} examples", flush=True)
 
     offsets = np.linspace(-2, 2, 17)   # in units of native margin SD
@@ -82,11 +87,13 @@ def main():
 
     for regime in REGIMES:
         for seed in SEEDS:
-            ck = f"{HERE}/results_gemma/B/{regime}_s{seed}/model.pt"
+            ck = f"{RESULTS_DIR}/{regime}_s{seed}/model.pt"
             if not os.path.exists(ck):
                 continue
             m = BabyGemmaVLM(vocab_size=len(tok), dim=384, depth=6,
-                             yes_id=tok.stoi["yes"], no_id=tok.stoi["no"]).cuda()
+                             max_len=getattr(tok, "max_len", 32),
+                             yes_id=tok.stoi["yes"], no_id=tok.stoi["no"],
+                             use_ground=USE_GROUND, ground_dim=1152).cuda()
             m.load_state_dict(torch.load(ck, map_location="cuda"), strict=False)
             margin, clusters = margins_and_clusters(m, ds)
             sd = margin.std()
