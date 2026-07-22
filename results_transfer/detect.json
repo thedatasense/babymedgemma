@@ -1,0 +1,71 @@
+{
+  "val": {
+    "n": 1500,
+    "flip_rate": 0.058666666666666666,
+    "unreliant_rate": 0.51,
+    "detect_flip": {
+      "abs_margin": 0.9227803888745816,
+      "entropy": 0.07721961112541849,
+      "ground_contrib": 0.5698074942055111,
+      "image_ablate": 0.5160233711048159,
+      "image_swap": 0.6220303244913726,
+      "para_dispersion": 0.7087384110224054,
+      "hidden_probe": 0.8244591810455834
+    },
+    "detect_unreliant": {
+      "abs_margin": 0.4704121648659464,
+      "entropy": 0.5295878351340536,
+      "ground_contrib": 0.5071628651460585,
+      "image_ablate": 0.35523809523809524,
+      "image_swap": 0.8269761237828466,
+      "para_dispersion": 0.5098466053087902,
+      "hidden_probe": 0.6415401716242053
+    }
+  },
+  "ood_mimic": {
+    "n": 450,
+    "flip_rate": 0.04888888888888889,
+    "unreliant_rate": 0.54,
+    "detect_flip": {
+      "abs_margin": 0.9739804587935429,
+      "entropy": 0.0260195412064571,
+      "ground_contrib": 0.5934579439252337,
+      "image_ablate": 0.344838572642311,
+      "image_swap": 0.5399320305862362,
+      "para_dispersion": 0.7856839422259982,
+      "hidden_probe": 0.8384664401019541
+    },
+    "detect_unreliant": {
+      "abs_margin": 0.4906264288980339,
+      "entropy": 0.5093735711019661,
+      "ground_contrib": 0.5955547603427367,
+      "image_ablate": 0.6140633387010199,
+      "image_swap": 0.9066618953897536,
+      "para_dispersion": 0.45251585455557547,
+      "hidden_probe": 0.6737241804337886
+    }
+  },
+  "ood_vindr": {
+    "n": 1500,
+    "flip_rate": 0.062,
+    "unreliant_rate": 0.5293333333333333,
+    "detect_flip": {
+      "abs_margin": 0.974314296413478,
+      "entropy": 0.025685703586522064,
+      "ground_contrib": 0.629983721943279,
+      "image_ablate": 0.4300540309206655,
+      "image_swap": 0.6515043828476663,
+      "para_dispersion": 0.6243207923516061,
+      "hidden_probe": 0.8011784395992388
+    },
+    "detect_unreliant": {
+      "abs_margin": 0.5190807829257676,
+      "entropy": 0.48091921707423235,
+      "ground_contrib": 0.5203580679458546,
+      "image_ablate": 0.4296815350254387,
+      "image_swap": 0.8558451844927608,
+      "para_dispersion": 0.4999090202010832,
+      "hidden_probe": 0.623447099706724
+    }
+  }
+}
