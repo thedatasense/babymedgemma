@@ -91,6 +91,7 @@ def main():
         sig = {k: [] for k in ["abs_margin", "entropy", "ground_contrib",
                                "image_ablate", "image_swap", "para_dispersion"]}
         lab_flip, lab_unrel, H = [], [], []
+        percase = []                                                  # per-cluster export for the companion-site demo
         Z = torch.zeros(1, 256, gdim if False else 1152, device=dev)  # placeholder shape guard
 
         for r in rows:
@@ -126,6 +127,13 @@ def main():
             sig["image_swap"].append(-abs(m0 - m_swap[0]))
             sig["para_dispersion"].append(float(mp.std()))          # high SD -> flip
             H.append(hp[0])
+            gold = 1 if r.get("answer") == "yes" else 0
+            percase.append({"abs_margin": float(abs(m0)),            # single-pass detector score
+                            "flip": int(len(set(preds.tolist())) > 1),
+                            "correct": int(int(m0 > 0) == gold),
+                            "unreliant": int((m0 > 0) == (m_swap[0] > 0)),
+                            "swap_delta": float(abs(m0 - m_swap[0])), # two-pass image-swap signal
+                            "para_sd": float(mp.std())})
 
         H = np.stack(H); lab_flip = np.array(lab_flip); lab_unrel = np.array(lab_unrel)
         # hidden-state probe: 5-fold logistic on the answer-position hidden state
@@ -144,6 +152,7 @@ def main():
             r["detect_unreliant"][k] = auroc(s, lab_unrel)
         r["detect_flip"]["hidden_probe"] = probe(lab_flip)
         r["detect_unreliant"]["hidden_probe"] = probe(lab_unrel)
+        r["percase"] = percase
         res[split] = r
         print(f"  flip_rate={r['flip_rate']:.3f}  unreliant_rate={r['unreliant_rate']:.3f}")
         print("  AUROC catch FLIP:      " + "  ".join(f"{k} {v:.2f}" for k, v in r["detect_flip"].items()))
@@ -151,7 +160,20 @@ def main():
 
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     json.dump(res, open(OUT, "w"), indent=2)
-    print(f"\nwrote {OUT}")
+    # dedicated per-case export (columnar) for the companion-site margin-gate demo
+    percase_out = os.path.join(os.path.dirname(OUT), "detect_percase.json")
+    cols = {}
+    for split in SPLITS:
+        pc_rows = res[split]["percase"]
+        cols[split] = {
+            "n": len(pc_rows), "flip_rate": res[split]["flip_rate"],
+            "auroc_flip": res[split]["detect_flip"]["abs_margin"],
+            "abs_margin": [round(x["abs_margin"], 4) for x in pc_rows],
+            "flip": [x["flip"] for x in pc_rows],
+            "correct": [x["correct"] for x in pc_rows],
+        }
+    json.dump(cols, open(percase_out, "w"))
+    print(f"\nwrote {OUT} and {percase_out}")
 
 
 if __name__ == "__main__":
