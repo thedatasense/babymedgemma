@@ -221,3 +221,51 @@ as a mitigation whose backfiring must be measured, not as a detector.
 
 Citations were located through a literature search; the four preprints are cited at the
 level of their stated titles and abstracts, which were retrieved but not read in full.
+
+---
+
+## Appendix A. Stage 0 falsification of the grounding-route flip
+
+A grounding-route flip was proposed as the novel target for a monitor (CRISP): a case
+whose yes/no answer is stable across paraphrases while its finding-selective visual
+reliance changes across paraphrases. We ran a falsification pilot before building the
+monitor (`scripts/analysis/route_flip_pilot.py`, result
+`results_transfer/route_flip_pilot.json`).
+
+For image i, finding f, prompt p, with margin m and status y in {-1,+1}, using
+opposite-label matches I- and same-label matches I+ drawn from NIH validation images
+(unseen by the model, matched on view, sex, age band, and the non-target finding
+vector):
+
+    G = y * [ m(I_i,q_p) - median m(I-,q_p) ]
+    N = median | m(I_i,q_p) - m(I+,q_p) |
+    V = G - N
+
+Across 318 stable-answer cases and 5 prompts each:
+
+| component | variance |
+|---|---|
+| global prompt effect | 0.00003 |
+| case-by-prompt interaction (the phenomenon) | 0.0016 |
+| rematching noise | 1.30 |
+| route-flip candidates | 0 of 318 |
+
+The interaction term holds the matched controls fixed across prompts, so matching noise
+cancels and the 0.0016 is a clean measure: on a V scale of about 2, reliance swings by a
+standard deviation of 0.04 (two percent) across paraphrases. The phenomenon is absent in
+this model. The likely reason is that heavy paraphrase augmentation made the visual
+reliance, not only the answer, paraphrase-invariant.
+
+Caveats: the pilot measures the across-prompt stability of V cleanly but cannot quantify
+the absolute per-case grounding level (rematching noise 1.30, K=3 matches, no
+support-device covariate); it is same-distribution and single-seed. Route-flips may still
+occur in the deployed MedGemma-4B on skewed-prevalence data, where a strong text prior is
+available for one phrasing to fall back on. That, not the probe, is where the phenomenon
+should be tested next. Per the pre-registered go/stop, the route-flip head is removed from
+the monitor headline; the fallback is the margin flip gate plus a finding-specific
+reliance head.
+
+Literature note: the related-work verification (semantic entropy, SelfCheckGPT, SVAR,
+Blind-Image Contrastive Ranking, the VLM reliability probe, and the medical
+visual-chain-of-thought results) was contributed by the project author and not
+independently re-run here.

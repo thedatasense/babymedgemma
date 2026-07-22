@@ -1,0 +1,12 @@
+{
+  "n_cases": 319,
+  "n_stable": 318,
+  "n_prompts": 5,
+  "global_prompt_effect_var": 2.8711446914121934e-05,
+  "case_by_prompt_interaction_var": 0.0015550618807863579,
+  "rematching_noise_var": 1.3035238013325476,
+  "interaction_over_rematch": 0.0011929677678333942,
+  "n_route_flip_candidates": 0,
+  "route_flip_candidate_rate": 0.0,
+  "band": 1.0557500679829108
+}
