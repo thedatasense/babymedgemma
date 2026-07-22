@@ -224,46 +224,55 @@ level of their stated titles and abstracts, which were retrieved but not read in
 
 ---
 
-## Appendix A. Stage 0 falsification of the grounding-route flip
+## Appendix A. Stage 0 test of the grounding-route flip (corrected)
 
-A grounding-route flip was proposed as the novel target for a monitor (CRISP): a case
-whose yes/no answer is stable across paraphrases while its finding-selective visual
-reliance changes across paraphrases. We ran a falsification pilot before building the
-monitor (`scripts/analysis/route_flip_pilot.py`, result
-`results_transfer/route_flip_pilot.json`).
+A grounding-route flip is a stable-answer case whose finding-selective visual reliance V
+is grounded under one phrasing and near zero under another, reproducibly across
+independently drawn matched controls. An initial run reported a clean falsification; it
+was wrong, for three reasons a reviewer identified: the event rule detected a sign
+reversal rather than grounded-to-near-zero, the interaction numerator and the noise floor
+were centered differently so the reported ratio was uninterpretable, and the "held-out"
+prompts had in fact been trained on by the all-48-template checkpoint. The corrected pilot
+(`scripts/analysis/route_flip_pilot.py`) fixes all three: it scores the held-out
+checkpoints (`results_transfer_heldout/B/augmented_s*`, trained on 24 templates) on their
+24 genuinely unseen templates, over NIH validation images matched on view, sex, age band,
+and the non-target finding vector.
 
-For image i, finding f, prompt p, with margin m and status y in {-1,+1}, using
-opposite-label matches I- and same-label matches I+ drawn from NIH validation images
-(unseen by the model, matched on view, sex, age band, and the non-target finding
-vector):
+For image i, finding f, prompt p, margin m, status y in {-1,+1}, opposite-label matches
+I- and same-label matches I+ (two disjoint sets A, B):
 
-    G = y * [ m(I_i,q_p) - median m(I-,q_p) ]
-    N = median | m(I_i,q_p) - m(I+,q_p) |
-    V = G - N
+    G = y * [ m(I_i,q_p) - median m(I-,q_p) ],  N = median | m(I_i,q_p) - m(I+,q_p) |,  V = G - N
+    C(X)_{ip} = X_{ip} - mean_p X_{i.} - mean_i X_{.p} + mean X          (two-way centered)
+    sigma2_route = mean[ C(V_A) * C(V_B) ]     (reproducible interaction; case-bootstrapped)
+    rho          = corr( C(V_A), C(V_B) )
 
-Across 318 stable-answer cases and 5 prompts each:
+Result over three held-out seeds (240 cases, about 180 stable, 24 unseen prompts each):
 
-| component | variance |
-|---|---|
-| global prompt effect | 0.00003 |
-| case-by-prompt interaction (the phenomenon) | 0.0016 |
-| rematching noise | 1.30 |
-| route-flip candidates | 0 of 318 |
+| quantity | pooled | reading |
+|---|---|---|
+| sigma2_route (bootstrap CI excludes 0, all 3 seeds) | +0.053 | a real, reproducible case-by-prompt route effect |
+| sigma2_match_prompt (noise floor) | 0.064 | the effect is moderate, comparable to match noise |
+| corr(C_A, C_B) | +0.45 | the per-case route pattern reproduces across independent controls |
+| case-specific share of sigma2_route | 64 to 75 percent | mostly idiosyncratic to the case, not a finding-level prompt effect |
+| route-drop prevalence (threshold-calibrated) | about 0.25 | a quarter of stable-answer cases show a grounded-to-near-zero swing |
 
-The interaction term holds the matched controls fixed across prompts, so matching noise
-cancels and the 0.0016 is a clean measure: on a V scale of about 2, reliance swings by a
-standard deviation of 0.04 (two percent) across paraphrases. The phenomenon is absent in
-this model. The likely reason is that heavy paraphrase augmentation made the visual
-reliance, not only the answer, paraphrase-invariant.
+The phenomenon exists on unseen wording and is predominantly case-specific, which is the
+target a monitor would learn. This reverses the earlier appendix.
 
-Caveats: the pilot measures the across-prompt stability of V cleanly but cannot quantify
-the absolute per-case grounding level (rematching noise 1.30, K=3 matches, no
-support-device covariate); it is same-distribution and single-seed. Route-flips may still
-occur in the deployed MedGemma-4B on skewed-prevalence data, where a strong text prior is
-available for one phrasing to fall back on. That, not the probe, is where the phenomenon
-should be tested next. Per the pre-registered go/stop, the route-flip head is removed from
-the monitor headline; the fallback is the margin flip gate plus a finding-specific
-reliance head.
+Caveats. The effect is moderate: sigma2_route is comparable to the match-noise floor, so
+per case the route signal is about as large as the estimation noise, and whether a
+single-pass distilled head can exploit it is a Stage 1 question rather than settled here.
+The route-drop prevalence is threshold-dependent (delta calibrated on match-noise, not the
+full zero-vision equivalence test); the variance decomposition and the correlation are the
+robust evidence. It is same-distribution (NIH validation), three seeds, and the match does
+not control support devices (absent from NIH-14). Held-out-hospital replication
+(MIMIC-CXR, VinDr-CXR) and a device-aware match remain required before a transfer claim.
+
+Verdict. Stage 0 passes: the route head is warranted. The go/stop for the full monitor
+should be exploitability, whether a single-pass head recovers the route signal at useful
+precision and recall on held-out data and seeds, not mere existence. Per-case records
+(margins, match identities, G/N/V) are saved to `results_transfer/route_flip_records.json`
+for independent bootstrap and audit.
 
 Literature note: the related-work verification (semantic entropy, SelfCheckGPT, SVAR,
 Blind-Image Contrastive Ranking, the VLM reliability probe, and the medical
