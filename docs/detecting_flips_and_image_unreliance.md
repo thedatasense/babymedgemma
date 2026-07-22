@@ -224,55 +224,65 @@ level of their stated titles and abstracts, which were retrieved but not read in
 
 ---
 
-## Appendix A. Stage 0 test of the grounding-route flip (corrected)
+## Appendix A. Stage 0 on the grounding-route flip: real in aggregate, not identifiable per case
 
-A grounding-route flip is a stable-answer case whose finding-selective visual reliance V
-is grounded under one phrasing and near zero under another, reproducibly across
-independently drawn matched controls. An initial run reported a clean falsification; it
-was wrong, for three reasons a reviewer identified: the event rule detected a sign
-reversal rather than grounded-to-near-zero, the interaction numerator and the noise floor
-were centered differently so the reported ratio was uninterpretable, and the "held-out"
-prompts had in fact been trained on by the all-48-template checkpoint. The corrected pilot
-(`scripts/analysis/route_flip_pilot.py`) fixes all three: it scores the held-out
-checkpoints (`results_transfer_heldout/B/augmented_s*`, trained on 24 templates) on their
-24 genuinely unseen templates, over NIH validation images matched on view, sex, age band,
-and the non-target finding vector.
+A grounding-route flip is a stable-answer case that is visually grounded under one
+phrasing and image-unreliant under another. We ran three pilots; the first two reached
+wrong conclusions and are recorded here so the reasoning is auditable.
 
-For image i, finding f, prompt p, margin m, status y in {-1,+1}, opposite-label matches
-I- and same-label matches I+ (two disjoint sets A, B):
+- Pilot 1 reported a clean falsification. Wrong: a sign-reversal event rule, mismatched
+  centering of the numerator and the noise floor, and prompts the all-48-template
+  checkpoint had trained on.
+- Pilot 2 reported a 25 percent route-drop prevalence. Wrong: the event was scored on
+  two-way-centered V, where "near zero" means ordinary-for-this-case, not unreliant;
+  after centering a near-zero prompt is guaranteed, so the rate was trivially inflated.
+- Pilot 3 (`scripts/analysis/route_flip_pilot.py`) scores the held-out checkpoints
+  (trained on 24 templates) on their 24 unseen templates, over NIH validation images
+  matched on view, sex, age band, and the non-target finding vector; uses a centered
+  cross-draw covariance for the population interaction and a RAW-V event with delta_0 and
+  delta_g locked on a development same-versus-same null; draws several independent match
+  sets from the full eligible pool; saves every matched-image margin; and bootstraps by
+  patient.
 
-    G = y * [ m(I_i,q_p) - median m(I-,q_p) ],  N = median | m(I_i,q_p) - m(I+,q_p) |,  V = G - N
-    C(X)_{ip} = X_{ip} - mean_p X_{i.} - mean_i X_{.p} + mean X          (two-way centered)
-    sigma2_route = mean[ C(V_A) * C(V_B) ]     (reproducible interaction; case-bootstrapped)
-    rho          = corr( C(V_A), C(V_B) )
+Two questions separate cleanly.
 
-Result over three held-out seeds (240 cases, about 180 stable, 24 unseen prompts each):
+Population interaction (does wording modulate reliance at all), over 3 held-out seeds:
 
 | quantity | pooled | reading |
 |---|---|---|
-| sigma2_route (bootstrap CI excludes 0, all 3 seeds) | +0.053 | a real, reproducible case-by-prompt route effect |
-| sigma2_match_prompt (noise floor) | 0.064 | the effect is moderate, comparable to match noise |
-| corr(C_A, C_B) | +0.45 | the per-case route pattern reproduces across independent controls |
-| case-specific share of sigma2_route | 64 to 75 percent | mostly idiosyncratic to the case, not a finding-level prompt effect |
-| route-drop prevalence (threshold-calibrated) | about 0.25 | a quarter of stable-answer cases show a grounded-to-near-zero swing |
+| sigma2_route (cross-draw covariance) | +0.073 | reproducible interaction |
+| corr across independent match draws | +0.60 | the per-case pattern reproduces |
+| case-specific share | 90 percent | idiosyncratic to the case, not finding-level |
 
-The phenomenon exists on unseen wording and is predominantly case-specific, which is the
-target a monitor would learn. This reverses the earlier appendix.
+Individual route-drop event (raw V, null-locked thresholds, all draws must agree,
+patient-clustered test split): 0.0 percent in every seed. The reason is not that
+grounding and unreliance fail to co-occur; it is that confidently grounded never happens.
+The same-versus-same null |V| (no true finding change) reaches as high as the real V
+(null 97.5th percentile 5.4 to 7.5; real V maxes at about 5), so swapping to an
+opposite-label image moves the margin by about as much as swapping to a same-label image.
+Per case, finding-selective reliance is not separable from generic patient-change noise.
 
-Caveats. The effect is moderate: sigma2_route is comparable to the match-noise floor, so
-per case the route signal is about as large as the estimation noise, and whether a
-single-pass distilled head can exploit it is a Stage 1 question rather than settled here.
-The route-drop prevalence is threshold-dependent (delta calibrated on match-noise, not the
-full zero-vision equivalence test); the variance decomposition and the correlation are the
-robust evidence. It is same-distribution (NIH validation), three seeds, and the match does
-not control support devices (absent from NIH-14). Held-out-hospital replication
-(MIMIC-CXR, VinDr-CXR) and a device-aware match remain required before a transfer claim.
+Both facts hold at once because the reproducible prompt modulation is small (within-case V
+standard deviation about 0.22) and shows only after averaging over many cases and draws,
+while the absolute per-case reliance is estimated with a plus or minus 3 to 5 noise floor.
 
-Verdict. Stage 0 passes: the route head is warranted. The go/stop for the full monitor
-should be exploitability, whether a single-pass head recovers the route signal at useful
-precision and recall on held-out data and seeds, not mere existence. Per-case records
-(margins, match identities, G/N/V) are saved to `results_transfer/route_flip_records.json`
-for independent bootstrap and audit.
+Verdict.
+
+| claim | verdict |
+|---|---|
+| prompt-dependent reliance interaction exists (population) | supported (corr 0.60, 90 percent case-specific, 3 seeds) |
+| a stable answer can hide small route variation | real but small (within-case V sd about 0.22) |
+| individual grounded-to-unreliant route-drops occur at a measurable rate | no (0 percent, null-anchored, reproducibility-required) |
+| a per-case single-pass route-drop monitor is warranted | no; the event has about zero detectable prevalence |
+
+This is why the method is counterfactual and not causal: observationally matched
+radiographs give a real population signal but cannot identify per-case grounding, because
+the matched-counterfactual noise is as large as the finding-selective signal. Pursuing the
+route flip would require cleaner per-case interventions (inpainting the finding, or
+same-patient longitudinal appear-or-resolve pairs), not observational matches. The
+deployable deliverable remains the margin flip gate; the reliance signal is real only at
+the finding-population level, measurable but not certifiable per case. Per-case records
+with every matched-image margin are saved to `results_transfer/route_flip_records.json`.
 
 Literature note: the related-work verification (semantic entropy, SelfCheckGPT, SVAR,
 Blind-Image Contrastive Ranking, the VLM reliability probe, and the medical

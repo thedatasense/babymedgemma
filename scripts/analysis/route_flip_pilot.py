@@ -1,24 +1,25 @@
-"""Stage 0 falsification (corrected): do grounding-route flips exist on UNSEEN wording?
+"""Stage 0 (corrected event label): does a grounded-to-unreliant route drop occur?
 
-A grounding-route flip is a stable-answer case whose finding-selective visual reliance V
-is clearly grounded under one phrasing and near zero (image-unreliant) under another,
-reproducibly across independently drawn matched controls.
+Two separate questions, two separate statistics:
 
-Corrections over the first version, each of which invalidated the earlier headline:
-  1. Checkpoints trained with held-out phrasings (results_transfer_heldout/B/augmented_s*,
-     trained on 24 of the 48 templates), scored on the 24 GENUINELY UNSEEN templates.
-  2. A two-way-centered cross-match variance decomposition, so the numerator and the
-     noise floor are centered the same way and constant match-set offsets do not inflate
-     the denominator:
-        C(X)_{ip} = X_{ip} - mean_p X_{i.} - mean_i X_{.p} + mean X
-        sigma2_route        = mean[ C(V_A) * C(V_B) ]      (reproducible interaction)
-        sigma2_match_prompt = 0.5 * mean[ (C(V_A) - C(V_B))^2 ]
-        rho                 = corr( C(V_A), C(V_B) )
-  3. A route-drop event defined as grounded-to-near-zero, not a sign reversal: one prompt
-     with C(V) above a grounded threshold (both match sets agreeing, sign excluding zero)
-     and one prompt with |C(V)| inside an equivalence band, calibrated on the match-noise
-     null. Reported with a case-bootstrap 95% interval, finding-stratified.
-Per-case records (margins, match identities, G/N/V) are saved for independent audit.
+  Population interaction (does reliance depend on wording at all): computed on TWO-WAY
+  CENTERED V, via the cross-draw covariance and its finding-vs-case split. Centering is
+  correct here because we are asking about variation, not level.
+
+  Route-drop event (a grounded prompt and an image-unreliant prompt in the same
+  stable-answer case): computed on RAW V, because "unreliant" means the ABSOLUTE reliance
+  is near zero, which centering destroys. A prompt is grounded if every match draw gives
+  V > delta_g; unreliant if every draw gives |V| < delta_0. delta_0 and delta_g are locked
+  on a development split against a same-versus-same null (V with no true finding change),
+  then applied to a disjoint test split.
+
+Corrections over the previous version:
+  - event on raw V, not centered V (the centered "near zero" was trivially always true);
+  - delta_0 / delta_g locked on a development null anchor, not on the match-noise;
+  - several independent match draws from the full eligible pool (not a fixed split of the
+    six nearest), giving per-case intervals and honest reproducibility;
+  - every matched-image margin is saved, so G, N, V, and rematching are auditable offline;
+  - finding-vs-case variance split and patient-cluster bootstrap are in the script.
 
     python scripts/analysis/route_flip_pilot.py
 """
@@ -41,22 +42,15 @@ OUT = os.path.join(ROOT, "results_transfer", "route_flip_pilot.json")
 RECS = os.path.join(ROOT, "results_transfer", "route_flip_records.json")
 FINDINGS = ["Effusion", "Atelectasis", "Cardiomegaly", "Pneumothorax", "Consolidation",
             "Infiltration", "Nodule", "Mass"]
-CASES_PER_FINDING = 30
-K = 3
-AGE_BAND = 12
+CASES_PER_FINDING = 40
+POOL, K, M_DRAWS, AGE_BAND = 10, 3, 6, 12
 
 
 def unseen_prompts(phrase):
-    """The 24 held-out templates (indices HELDOUT_FROM..end of each family), never trained
-    on by the held-out checkpoints; canonical is excluded because it was trained on."""
-    out = []
-    for fam, tmpls in T.PARAPHRASES.items():
-        for t in tmpls[T.HELDOUT_FROM:]:
-            out.append(t.format(f=phrase))
-    return out
+    return [t.format(f=phrase) for tmpls in T.PARAPHRASES.values() for t in tmpls[T.HELDOUT_FROM:]]
 
 
-def two_way_center(X):
+def twc(X):
     return X - X.mean(1, keepdims=True) - X.mean(0, keepdims=True) + X.mean()
 
 
@@ -74,17 +68,14 @@ def load_meta(have):
         except ValueError:
             continue
         meta[n] = {"findings": {k for k in NIH_PHRASE if k in row["Finding Labels"].split("|")},
-                   "age": age, "sex": row["Patient Gender"], "view": row["View Position"]}
+                   "age": age, "sex": row["Patient Gender"], "view": row["View Position"],
+                   "patient": row["Patient ID"]}
     return meta
 
 
 def build_cases(meta, rng):
     def ok(a, b):
         return a["sex"] == b["sex"] and a["view"] == b["view"] and abs(a["age"] - b["age"]) <= AGE_BAND
-
-    def dist(a, b, tgt):
-        return len((a["findings"] ^ b["findings"]) - {tgt})
-
     names = list(meta)
     cases = []
     for f in FINDINGS:
@@ -96,14 +87,36 @@ def build_cases(meta, rng):
             y = 1 if f in meta[i]["findings"] else -1
             same = [n for n in (pos if y == 1 else neg) if n != i and ok(meta[i], meta[n])]
             opp = [n for n in (neg if y == 1 else pos) if ok(meta[i], meta[n])]
-            if len(same) < 2 * K or len(opp) < 2 * K:
+            if len(same) < POOL + K or len(opp) < POOL:      # need same for N + null second set
                 continue
-            same = sorted(same, key=lambda n: dist(meta[i], meta[n], f))[:2 * K]
-            opp = sorted(opp, key=lambda n: dist(meta[i], meta[n], f))[:2 * K]
-            rng.shuffle(same); rng.shuffle(opp)
+            d = lambda n: len((meta[i]["findings"] ^ meta[n]["findings"]) - {f})
+            same = sorted(same, key=d)[:POOL + K]
+            opp = sorted(opp, key=d)[:POOL]
             cases.append({"i": i, "y": y, "finding": f, "phrase": NIH_PHRASE[f],
-                          "same": same, "opp": opp})
+                          "patient": meta[i]["patient"], "same": same, "opp": opp})
     return cases
+
+
+def draws_V(mi, m_opp, m_same, rng):
+    """M independent draws of V = G - N from the full pools. mi:[P], m_opp/m_same:[P,POOL]."""
+    P = mi.shape[0]
+    out = np.zeros((M_DRAWS, P))
+    for d in range(M_DRAWS):
+        io = rng.sample(range(m_opp.shape[1]), K)
+        is_ = rng.sample(range(m_same.shape[1]), K)
+        G = mi - np.median(m_opp[:, io], axis=1)
+        N = np.median(np.abs(mi[:, None] - m_same[:, is_]), axis=1)
+        out[d] = G - N
+    return out
+
+
+def null_V(mi, m_same, rng):
+    """Same-versus-same null: opposite slot filled by same-label images -> no finding signal."""
+    a = rng.sample(range(m_same.shape[1]), K)
+    b = [j for j in range(m_same.shape[1]) if j not in a][:K]
+    G = mi - np.median(m_same[:, a], axis=1)
+    N = np.median(np.abs(mi[:, None] - m_same[:, b]), axis=1)
+    return G - N
 
 
 def main():
@@ -111,18 +124,17 @@ def main():
     feats, pc = load_feature_cache(), load_pooled_cache()
     dev = "cuda"
     by_name = {os.path.basename(p): p for p in feats["index"]}
-    pooled_names = {os.path.basename(x) for x in pc["index"]}
-    have = {n: p for n, p in by_name.items() if n in pooled_names}
+    pooled = {os.path.basename(x) for x in pc["index"]}
+    have = {n: p for n, p in by_name.items() if n in pooled}
     meta = load_meta(have)
-    print(f"[pilot] NIH val images with metadata+features: {len(meta)}", flush=True)
     cases = build_cases(meta, random.Random(0))
-    print(f"[pilot] {len(cases)} matchable cases; 24 unseen prompts; seeds {SEEDS}", flush=True)
+    print(f"[pilot] {len(meta)} val images; {len(cases)} matchable cases; 24 unseen prompts; seeds {SEEDS}", flush=True)
 
     def vec(n):
         p = by_name[n]
         return feats["feats"][feats["index"][p]].float(), pc["pooled"][pc["index"][p]].float()
 
-    per_seed, all_records = [], []
+    per_seed, records = [], []
     for seed in SEEDS:
         m = BabyGemmaVLM(vocab_size=len(tok), dim=384, depth=6, max_len=tok.max_len,
                          yes_id=tok.stoi["yes"], no_id=tok.stoi["no"],
@@ -131,87 +143,87 @@ def main():
         m.eval()
 
         @torch.no_grad()
-        def margins(names, prompt):
-            ids, ap = tok.encode(prompt)
+        def marg(names, q):
+            ids, ap = tok.encode(q)
             vs = torch.stack([vec(n)[0] for n in names]).to(dev)
             gs = torch.stack([vec(n)[1] for n in names]).to(dev)
-            idb = torch.tensor([ids]).repeat(len(names), 1).to(dev)
-            apb = torch.tensor([ap]).repeat(len(names)).to(dev)
-            lg, _ = m(vs, idb, apb, ground=gs)
+            lg, _ = m(vs, torch.tensor([ids]).repeat(len(names), 1).to(dev),
+                      torch.tensor([ap]).repeat(len(names)).to(dev), ground=gs)
             return (lg[:, 1] - lg[:, 0]).float().cpu().numpy()
 
-        VA, VB, stable_mask, findings, recs = [], [], [], [], []
+        dr = random.Random(100 + seed)
+        rows = []
         for c in cases:
             prompts = unseen_prompts(c["phrase"])
-            mi = np.array([margins([c["i"]], q)[0] for q in prompts])          # [P]
-            mo = np.array([margins(c["opp"], q) for q in prompts])             # [P,6]
-            ms = np.array([margins(c["same"], q) for q in prompts])            # [P,6]
-            y = c["y"]
-            va, vb = {}, {}
-            for tag, sl in (("A", slice(0, K)), ("B", slice(K, 2 * K))):
-                G = y * (mi - np.median(mo[:, sl], axis=1))
-                N = np.median(np.abs(mi[:, None] - ms[:, sl]), axis=1)
-                (va if tag == "A" else vb)["V"] = (G - N)
-            VA.append(va["V"]); VB.append(vb["V"])
-            stable_mask.append(len(set((mi > 0).tolist())) == 1)
-            findings.append(c["finding"])
-            recs.append({"seed": seed, "finding": c["finding"], "y": y, "image": c["i"],
-                         "same": c["same"], "opp": c["opp"], "stable": bool(stable_mask[-1]),
-                         "m_i": mi.tolist(), "VA": va["V"].tolist(), "VB": vb["V"].tolist()})
-        all_records += recs
+            mi = np.array([marg([c["i"]], q)[0] for q in prompts])
+            mo = np.array([marg(c["opp"], q) for q in prompts])            # [P, POOL]
+            ms = np.array([marg(c["same"], q) for q in prompts])           # [P, POOL+K]
+            V = draws_V(mi, mo, ms[:, :POOL], dr)                           # [M, P]
+            Vn = null_V(mi, ms, dr)                                         # [P] null
+            stable = len(set((mi > 0).tolist())) == 1
+            rows.append({"c": c, "mi": mi, "V": V, "Vn": Vn, "stable": stable})
+            records.append({"seed": seed, "finding": c["finding"], "y": c["y"],
+                            "image": c["i"], "patient": c["patient"], "stable": bool(stable),
+                            "m_i": mi.tolist(), "m_opp": mo.tolist(),
+                            "m_same": ms.tolist(), "opp": c["opp"], "same": c["same"]})
 
-        VA = np.array(VA); VB = np.array(VB); stable_mask = np.array(stable_mask)
-        fnd = np.array(findings)
-        sA, sB, sf = VA[stable_mask], VB[stable_mask], fnd[stable_mask]
-        CA, CB = two_way_center(sA), two_way_center(sB)
-        sig_route = float(np.mean(CA * CB))
-        sig_match = float(0.5 * np.mean((CA - CB) ** 2))
-        rho = float(np.corrcoef(CA.ravel(), CB.ravel())[0, 1])
-        rms_within = float(np.sqrt(np.mean(np.var((sA + sB) / 2, axis=1))))
+        stab = [r for r in rows if r["stable"]]
+        pats = np.array([r["c"]["patient"] for r in stab])
+        fnd = np.array([r["c"]["finding"] for r in stab])
+        Vmean = np.array([r["V"].mean(0) for r in stab])                   # [C, P]
+        # population interaction on centered V, two draws for the cross covariance
+        VA = np.array([r["V"][0] for r in stab]); VB = np.array([r["V"][1] for r in stab])
+        CA, CB = twc(VA), twc(VB)
+        sig_route = float(np.mean(CA * CB)); rho = float(np.corrcoef(CA.ravel(), CB.ravel())[0, 1])
+        # finding vs case split of the reproducible interaction
+        fpA = np.zeros_like(VA); fpB = np.zeros_like(VB)
+        for f in set(fnd.tolist()):
+            mk = fnd == f; fpA[mk] = CA[mk].mean(0); fpB[mk] = CB[mk].mean(0)
+        sig_find = float(np.mean(fpA * fpB)); sig_case = float(np.mean((CA - fpA) * (CB - fpB)))
 
-        # event: grounded (both sets agree, sign excludes zero, above delta_g) to
-        # near-zero (|C(Vbar)| < delta_0). delta_0 from the match-noise null.
-        Cbar = (CA + CB) / 2
-        delta_0 = float(np.sqrt(sig_match))
-        delta_g = 2 * delta_0
-        grounded = (Cbar > delta_g) & (np.minimum(CA, CB) > 0)
-        nearzero = np.abs(Cbar) < delta_0
-        route = (grounded.any(1) & nearzero.any(1))
+        # event on RAW V, deltas locked on a dev split's same-vs-same null
+        idx = np.arange(len(stab)); r0 = np.random.default_rng(seed); r0.shuffle(idx)
+        dev_i, test_i = idx[:len(idx) // 2], idx[len(idx) // 2:]
+        Vn_all = np.array([r["Vn"] for r in stab])
+        d0 = float(np.percentile(np.abs(Vn_all[dev_i]), 90))
+        dg = float(np.percentile(np.abs(Vn_all[dev_i]), 97.5))
+        Vmin = np.array([r["V"].min(0) for r in stab])                     # all draws agree grounded
+        Vabsmax = np.array([np.abs(r["V"]).max(0) for r in stab])          # all draws agree near zero
+        grounded = Vmin > dg
+        unreliant = Vabsmax < d0
+        route = grounded.any(1) & unreliant.any(1)
+        rate_test = float(route[test_i].mean())
 
-        # case-bootstrap, finding-stratified, on the stable subset
+        # patient-cluster bootstrap on the test split
         rb = np.random.default_rng(seed)
-        boots_route, boots_sig = [], []
-        idxf = {f: np.where(sf == f)[0] for f in set(sf.tolist())}
+        upat = np.unique(pats[test_i])
+        boots = []
         for _ in range(1000):
-            pick = np.concatenate([rb.choice(v, len(v), replace=True) for v in idxf.values()])
-            boots_route.append(route[pick].mean())
-            ca, cb = two_way_center(sA[pick]), two_way_center(sB[pick])
-            boots_sig.append(float(np.mean(ca * cb)))
-        ci = lambda a: [float(np.percentile(a, 2.5)), float(np.percentile(a, 97.5))]
-        r = {"seed": seed, "n_cases": int(len(cases)), "n_stable": int(stable_mask.sum()),
-             "n_prompts": int(sA.shape[1]),
-             "sigma2_route": sig_route, "sigma2_route_ci": ci(boots_sig),
-             "sigma2_match_prompt": sig_match, "corr_CA_CB": rho,
-             "rms_within_case_std": rms_within,
-             "route_drop_rate": float(route.mean()), "route_drop_ci": ci(boots_route),
-             "delta_0": delta_0, "delta_g": delta_g}
+            pk = rb.choice(upat, len(upat), replace=True)
+            sel = np.concatenate([test_i[pats[test_i] == p] for p in pk])
+            boots.append(route[sel].mean())
+        ci = [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))]
+        r = {"seed": seed, "n_cases": len(cases), "n_stable": len(stab),
+             "sigma2_route": sig_route, "corr": rho,
+             "sigma2_finding": sig_find, "sigma2_case": sig_case,
+             "case_share": sig_case / (sig_route + 1e-9),
+             "delta_0": d0, "delta_g": dg, "n_patients_test": int(len(upat)),
+             "route_drop_rate_test": rate_test, "route_drop_ci_patient": ci}
         per_seed.append(r)
-        print(f"\n[seed {seed}] stable {r['n_stable']}/{r['n_cases']}  prompts {r['n_prompts']}")
-        print(f"  sigma2_route = {sig_route:+.4f}  95% CI {r['sigma2_route_ci']}   (>0 and CI excluding 0 = real interaction)")
-        print(f"  sigma2_match_prompt = {sig_match:.4f}   corr(C_A,C_B) = {rho:+.3f}")
-        print(f"  rms within-case std of V = {rms_within:.4f}")
-        print(f"  route-drop rate = {r['route_drop_rate']:.3f}  95% CI {r['route_drop_ci']}")
+        print(f"[seed {seed}] stable {len(stab)}  sig_route {sig_route:+.4f} corr {rho:+.2f} "
+              f"case_share {r['case_share']:.0%}  | raw-V route drop (test) {rate_test:.3f} "
+              f"CI {ci}  (delta_0 {d0:.3f} delta_g {dg:.3f})", flush=True)
 
     agg = {k: float(np.mean([s[k] for s in per_seed]))
-           for k in ["sigma2_route", "sigma2_match_prompt", "corr_CA_CB",
-                     "rms_within_case_std", "route_drop_rate"]}
-    print(f"\n=== pooled over {len(SEEDS)} held-out seeds ===")
-    print(f"  sigma2_route {agg['sigma2_route']:+.4f}  sigma2_match {agg['sigma2_match_prompt']:.4f}  "
-          f"corr {agg['corr_CA_CB']:+.3f}  route-drop {agg['route_drop_rate']:.3f}")
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
+           for k in ["sigma2_route", "corr", "case_share", "route_drop_rate_test"]}
+    print(f"\n=== pooled ({len(SEEDS)} held-out seeds) ===")
+    print(f"  interaction: sig_route {agg['sigma2_route']:+.4f}  corr {agg['corr']:+.2f}  "
+          f"case_share {agg['case_share']:.0%}")
+    print(f"  raw-V grounded->unreliant route-drop (locked deltas, patient-clustered): "
+          f"{agg['route_drop_rate_test']:.3f}")
     json.dump({"per_seed": per_seed, "pooled": agg}, open(OUT, "w"), indent=2)
-    json.dump(all_records, open(RECS, "w"))
-    print(f"wrote {OUT} and per-case records to {RECS}")
+    json.dump(records, open(RECS, "w"))
+    print(f"wrote {OUT} and full-component records to {RECS}")
 
 
 if __name__ == "__main__":
