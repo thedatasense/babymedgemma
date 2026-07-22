@@ -228,7 +228,8 @@ level of their stated titles and abstracts, which were retrieved but not read in
 
 A grounding-route flip is a stable-answer case that is visually grounded under one
 phrasing and image-unreliant under another. We ran three pilots; the first two reached
-wrong conclusions and are recorded here so the reasoning is auditable.
+wrong conclusions, and the third carried a label-direction bug that is now fixed. All are
+recorded here so the reasoning is auditable.
 
 - Pilot 1 reported a clean falsification. Wrong: a sign-reversal event rule, mismatched
   centering of the numerator and the noise floor, and prompts the all-48-template
@@ -241,8 +242,14 @@ wrong conclusions and are recorded here so the reasoning is auditable.
   matched on view, sex, age band, and the non-target finding vector; uses a centered
   cross-draw covariance for the population interaction and a RAW-V event with delta_0 and
   delta_g locked on a development same-versus-same null; draws several independent match
-  sets from the full eligible pool; saves every matched-image margin; and bootstraps by
-  patient.
+  sets from the ten nearest eligible controls; saves every matched-image margin; and
+  splits the development and test sets by patient. Its first write dropped the y label
+  direction from the grounding numerator G, so negative-finding cases contributed the
+  wrong evidence sign. The numbers below are after restoring `G = y * (m_i - median m_opp)`
+  in `draws_V` and `null_V`, moving the development and test split to the patient level,
+  and replacing the degenerate zero-event bootstrap interval with a Clopper-Pearson upper
+  bound. Restoring the sign lowers the interaction slightly and does not change either
+  verdict.
 
 Two questions separate cleanly.
 
@@ -250,17 +257,20 @@ Population interaction (does wording modulate reliance at all), over 3 held-out 
 
 | quantity | pooled | reading |
 |---|---|---|
-| sigma2_route (cross-draw covariance) | +0.073 | reproducible interaction |
-| corr across independent match draws | +0.60 | the per-case pattern reproduces |
-| case-specific share | 90 percent | idiosyncratic to the case, not finding-level |
+| sigma2_route (cross-draw covariance) | +0.062 | reproducible interaction |
+| corr across independent match draws | +0.56 | the per-case pattern reproduces |
+| case-specific share | 82 percent | idiosyncratic to the case, not finding-level |
 
 Individual route-drop event (raw V, null-locked thresholds, all draws must agree,
-patient-clustered test split): 0.0 percent in every seed. The reason is not that
-grounding and unreliance fail to co-occur; it is that confidently grounded never happens.
-The same-versus-same null |V| (no true finding change) reaches as high as the real V
-(null 97.5th percentile 5.4 to 7.5; real V maxes at about 5), so swapping to an
-opposite-label image moves the margin by about as much as swapping to a same-label image.
-Per case, finding-selective reliance is not separable from generic patient-change noise.
+patient-split test set): zero observed in every seed, 0 of 345 pooled test patients. Because
+a bootstrap of zero events returns a degenerate [0, 0], we report a Clopper-Pearson 97.5th
+upper bound with the patient as the unit: 2.9 to 3.5 percent per seed, near 3 percent. The
+reason the event does not fire is not that grounding and unreliance fail to co-occur; it is
+that confidently grounded never happens. The same-versus-same null |V| (no true finding
+change) reaches as high as the real V (null 97.5th percentile 4.9 to 7.2; real |V| maxes at
+5.8 to 6.6), so swapping to an opposite-label image moves the margin by about as much as
+swapping to a same-label image. Per case, finding-selective reliance is not separable from
+generic patient-change noise.
 
 Both facts hold at once because the reproducible prompt modulation is small (within-case V
 standard deviation about 0.22) and shows only after averaging over many cases and draws,
@@ -270,19 +280,26 @@ Verdict.
 
 | claim | verdict |
 |---|---|
-| prompt-dependent reliance interaction exists (population) | supported (corr 0.60, 90 percent case-specific, 3 seeds) |
+| prompt-dependent reliance interaction exists (population) | supported (corr 0.56, 82 percent case-specific, 3 seeds) |
 | a stable answer can hide small route variation | real but small (within-case V sd about 0.22) |
-| individual grounded-to-unreliant route-drops occur at a measurable rate | no (0 percent, null-anchored, reproducibility-required) |
+| individual grounded-to-unreliant route-drops occur at a measurable rate | no (0 of 345 test patients, patient-level upper bound near 3 percent) |
 | a per-case single-pass route-drop monitor is warranted | no; the event has about zero detectable prevalence |
 
 This is why the method is counterfactual and not causal: observationally matched
 radiographs give a real population signal but cannot identify per-case grounding, because
 the matched-counterfactual noise is as large as the finding-selective signal. Pursuing the
-route flip would require cleaner per-case interventions (inpainting the finding, or
-same-patient longitudinal appear-or-resolve pairs), not observational matches. The
-deployable deliverable remains the margin flip gate; the reliance signal is real only at
-the finding-population level, measurable but not certifiable per case. Per-case records
-with every matched-image margin are saved to `results_transfer/route_flip_records.json`.
+route flip would require cleaner per-case interventions, and same-patient longitudinal
+appear-or-resolve pairs are preferable to finding inpainting because they avoid edit
+artifacts, not observational matches. The deployable deliverable remains the margin flip
+gate; the reliance signal is real only at the finding-population level, measurable but not
+certifiable per case. Per-case records with every matched-image margin are saved to
+`results_transfer/route_flip_records.json`.
+
+In one statement: prompt wording reproducibly modulates finding-selective reliance at the
+population level; most of this interaction is case-specific; under the observational
+matching design no per-case grounded-to-unreliant route drops were identified, with an
+approximate patient-level 95 percent upper bound near 3 percent; and generic
+patient-change variation prevents a dependable per-case grounding label.
 
 Literature note: the related-work verification (semantic entropy, SelfCheckGPT, SVAR,
 Blind-Image Contrastive Ranking, the VLM reliability probe, and the medical

@@ -16,10 +16,11 @@ Two separate questions, two separate statistics:
 Corrections over the previous version:
   - event on raw V, not centered V (the centered "near zero" was trivially always true);
   - delta_0 / delta_g locked on a development null anchor, not on the match-noise;
-  - several independent match draws from the full eligible pool (not a fixed split of the
-    six nearest), giving per-case intervals and honest reproducibility;
+  - several independent match draws from the ten nearest eligible controls (not a
+    fixed split of the six nearest), giving per-case intervals and honest reproducibility;
   - every matched-image margin is saved, so G, N, V, and rematching are auditable offline;
-  - finding-vs-case variance split and patient-cluster bootstrap are in the script.
+  - finding-vs-case variance split in the script; dev/test split by patient; zero-event
+    rates reported as Clopper-Pearson patient-level upper bounds, not a degenerate [0,0].
 
     python scripts/analysis/route_flip_pilot.py
 """
@@ -97,24 +98,25 @@ def build_cases(meta, rng):
     return cases
 
 
-def draws_V(mi, m_opp, m_same, rng):
-    """M independent draws of V = G - N from the full pools. mi:[P], m_opp/m_same:[P,POOL]."""
+def draws_V(mi, m_opp, m_same, y, rng):
+    """M draws of V = G - N from the ten nearest matched controls. y is the label
+    direction, so G measures finding-selective evidence for the case's true status."""
     P = mi.shape[0]
     out = np.zeros((M_DRAWS, P))
     for d in range(M_DRAWS):
         io = rng.sample(range(m_opp.shape[1]), K)
         is_ = rng.sample(range(m_same.shape[1]), K)
-        G = mi - np.median(m_opp[:, io], axis=1)
+        G = y * (mi - np.median(m_opp[:, io], axis=1))
         N = np.median(np.abs(mi[:, None] - m_same[:, is_]), axis=1)
         out[d] = G - N
     return out
 
 
-def null_V(mi, m_same, rng):
+def null_V(mi, m_same, y, rng):
     """Same-versus-same null: opposite slot filled by same-label images -> no finding signal."""
     a = rng.sample(range(m_same.shape[1]), K)
     b = [j for j in range(m_same.shape[1]) if j not in a][:K]
-    G = mi - np.median(m_same[:, a], axis=1)
+    G = y * (mi - np.median(m_same[:, a], axis=1))
     N = np.median(np.abs(mi[:, None] - m_same[:, b]), axis=1)
     return G - N
 
@@ -158,8 +160,8 @@ def main():
             mi = np.array([marg([c["i"]], q)[0] for q in prompts])
             mo = np.array([marg(c["opp"], q) for q in prompts])            # [P, POOL]
             ms = np.array([marg(c["same"], q) for q in prompts])           # [P, POOL+K]
-            V = draws_V(mi, mo, ms[:, :POOL], dr)                           # [M, P]
-            Vn = null_V(mi, ms, dr)                                         # [P] null
+            V = draws_V(mi, mo, ms[:, :POOL], c["y"], dr)                           # [M, P]
+            Vn = null_V(mi, ms, c["y"], dr)                                         # [P] null
             stable = len(set((mi > 0).tolist())) == 1
             rows.append({"c": c, "mi": mi, "V": V, "Vn": Vn, "stable": stable})
             records.append({"seed": seed, "finding": c["finding"], "y": c["y"],
@@ -182,8 +184,10 @@ def main():
         sig_find = float(np.mean(fpA * fpB)); sig_case = float(np.mean((CA - fpA) * (CB - fpB)))
 
         # event on RAW V, deltas locked on a dev split's same-vs-same null
-        idx = np.arange(len(stab)); r0 = np.random.default_rng(seed); r0.shuffle(idx)
-        dev_i, test_i = idx[:len(idx) // 2], idx[len(idx) // 2:]
+        upat_all = sorted(set(pats.tolist())); rp = random.Random(seed); rp.shuffle(upat_all)
+        devset = set(upat_all[:len(upat_all) // 2])          # split by PATIENT, not by case
+        dev_i = np.array([j for j, p in enumerate(pats) if p in devset])
+        test_i = np.array([j for j, p in enumerate(pats) if p not in devset])
         Vn_all = np.array([r["Vn"] for r in stab])
         d0 = float(np.percentile(np.abs(Vn_all[dev_i]), 90))
         dg = float(np.percentile(np.abs(Vn_all[dev_i]), 97.5))
@@ -194,25 +198,24 @@ def main():
         route = grounded.any(1) & unreliant.any(1)
         rate_test = float(route[test_i].mean())
 
-        # patient-cluster bootstrap on the test split
-        rb = np.random.default_rng(seed)
-        upat = np.unique(pats[test_i])
-        boots = []
-        for _ in range(1000):
-            pk = rb.choice(upat, len(upat), replace=True)
-            sel = np.concatenate([test_i[pats[test_i] == p] for p in pk])
-            boots.append(route[sel].mean())
-        ci = [float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))]
+        # zero (or near-zero) events: a bootstrap gives a degenerate [0,0]. Report the
+        # observed count and a Clopper-Pearson 95% upper bound with patients as the unit.
+        from scipy import stats as _st
+        n_ev = int(route[test_i].sum()); n_tp = int(len(np.unique(pats[test_i])))
+        upper = (float(1 - 0.025 ** (1 / n_tp)) if n_ev == 0
+                 else float(_st.beta.ppf(0.975, n_ev + 1, n_tp - n_ev)))
         r = {"seed": seed, "n_cases": len(cases), "n_stable": len(stab),
              "sigma2_route": sig_route, "corr": rho,
              "sigma2_finding": sig_find, "sigma2_case": sig_case,
              "case_share": sig_case / (sig_route + 1e-9),
-             "delta_0": d0, "delta_g": dg, "n_patients_test": int(len(upat)),
-             "route_drop_rate_test": rate_test, "route_drop_ci_patient": ci}
+             "delta_0": d0, "delta_g": dg,
+             "n_test_cases": int(len(test_i)), "n_test_patients": n_tp,
+             "route_drops_observed": n_ev, "route_drop_rate_test": rate_test,
+             "route_drop_upper95_patient": upper}
         per_seed.append(r)
         print(f"[seed {seed}] stable {len(stab)}  sig_route {sig_route:+.4f} corr {rho:+.2f} "
-              f"case_share {r['case_share']:.0%}  | raw-V route drop (test) {rate_test:.3f} "
-              f"CI {ci}  (delta_0 {d0:.3f} delta_g {dg:.3f})", flush=True)
+              f"case_share {r['case_share']:.0%}  | route drops {n_ev}/{len(test_i)} cases "
+              f"({n_tp} patients), 95% upper {upper*100:.1f}%  (delta_0 {d0:.2f} delta_g {dg:.2f})", flush=True)
 
     agg = {k: float(np.mean([s[k] for s in per_seed]))
            for k in ["sigma2_route", "corr", "case_share", "route_drop_rate_test"]}

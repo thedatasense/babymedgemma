@@ -4,61 +4,61 @@
       "seed": 0,
       "n_cases": 319,
       "n_stable": 222,
-      "sigma2_route": 0.0721573642929079,
-      "corr": 0.6041533716843193,
-      "sigma2_finding": 0.008153415245941152,
-      "sigma2_case": 0.06400394904696673,
-      "case_share": 0.887005072692939,
-      "delta_0": 3.0969128608703613,
-      "delta_g": 5.605731010437012,
-      "n_patients_test": 106,
+      "sigma2_route": 0.05603372297727383,
+      "corr": 0.5204835828571308,
+      "sigma2_finding": 0.009138395246400552,
+      "sigma2_case": 0.04689532773087327,
+      "case_share": 0.8369125662590815,
+      "delta_0": 3.32359492778778,
+      "delta_g": 4.937264269590379,
+      "n_test_cases": 112,
+      "n_test_patients": 105,
+      "route_drops_observed": 0,
       "route_drop_rate_test": 0.0,
-      "route_drop_ci_patient": [
-        0.0,
-        0.0
-      ]
+      "route_drop_upper95_patient": 0.03452221412650569
     },
     {
       "seed": 1,
       "n_cases": 319,
       "n_stable": 261,
-      "sigma2_route": 0.04364034858556077,
-      "corr": 0.5530243646796508,
-      "sigma2_finding": 0.003352911103599918,
-      "sigma2_case": 0.04028743748196085,
-      "case_share": 0.9231694490204245,
-      "delta_0": 3.701995372772217,
-      "delta_g": 5.859691619873047,
-      "n_patients_test": 129,
+      "sigma2_route": 0.044944873632186355,
+      "corr": 0.5747048962074733,
+      "sigma2_finding": 0.00821217057195486,
+      "sigma2_case": 0.03673270306023149,
+      "case_share": 0.8172834691572621,
+      "delta_0": 5.023540204763413,
+      "delta_g": 7.184988405928,
+      "n_test_cases": 133,
+      "n_test_patients": 125,
+      "route_drops_observed": 0,
       "route_drop_rate_test": 0.0,
-      "route_drop_ci_patient": [
-        0.0,
-        0.0
-      ]
+      "route_drop_upper95_patient": 0.029079837136431474
     },
     {
       "seed": 2,
       "n_cases": 319,
       "n_stable": 238,
-      "sigma2_route": 0.10338285609555309,
-      "corr": 0.6337447203985375,
-      "sigma2_finding": 0.010221013105012226,
-      "sigma2_case": 0.09316184299054087,
-      "case_share": 0.9011343428479124,
-      "delta_0": 3.473928928375244,
-      "delta_g": 5.391698360443115,
-      "n_patients_test": 115,
+      "sigma2_route": 0.08627651443681696,
+      "corr": 0.5732922316089863,
+      "sigma2_finding": 0.0175011203981243,
+      "sigma2_case": 0.06877539403869265,
+      "case_share": 0.7971508085425525,
+      "delta_0": 3.9513682425022125,
+      "delta_g": 6.258609876036644,
+      "n_test_cases": 119,
+      "n_test_patients": 115,
+      "route_drops_observed": 0,
       "route_drop_rate_test": 0.0,
-      "route_drop_ci_patient": [
-        0.0,
-        0.0
-      ]
+      "route_drop_upper95_patient": 0.031568195988247116
     }
   ],
   "pooled": {
-    "sigma2_route": 0.07306018965800724,
-    "corr": 0.5969741522541692,
-    "case_share": 0.9037696215204253,
-    "route_drop_rate_test": 0.0
-  }
+    "sigma2_route": 0.06241837034875904,
+    "corr": 0.5561602368911969,
+    "case_share": 0.8171156146529653,
+    "route_drop_rate_test": 0.0,
+    "route_drops_observed_total": 0,
+    "n_test_patients_total": 345
+  },
+  "note": "y-label direction restored in draws_V/null_V; dev/test split by patient; zero-event CIs reported as Clopper-Pearson 97.5% upper bounds. Recomputed from saved deterministic margins in route_flip_records.json."
 }
