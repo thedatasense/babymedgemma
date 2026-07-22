@@ -112,6 +112,19 @@ The dissertation probe loads the same way with `subfolder="probe-1841"` (it take
 `ground` argument). `encode_images` needs gated access to `google/medsiglip-448`.
 `feature_cache/` and `checkpoints/` in this repo belong to the **probe** variant.
 
+## Repository structure
+
+```
+config.json  model.safetensors  modeling_babymedgemma.py   scaled grounded model (default)
+probe-1841/                                                 the 1,841-question dissertation probe
+feature_cache/medsiglip_feats.pt                            896-pixel MedSigLIP cache (probe variant)
+checkpoints/{B,C,D}/                                        per-run BabyGemmaVLM state_dicts (probe variant)
+```
+
+Training and analysis code, and the exact scripts that produced every number here, are on
+GitHub: [thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma). Load
+either model with the same call; the probe needs `subfolder="probe-1841"`.
+
 ## Citation
 
 > Sadanandan, B. (2026). *Paraphrase Sensitivity in Medical Vision-Language
