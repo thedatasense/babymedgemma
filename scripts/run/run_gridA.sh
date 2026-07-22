@@ -11,5 +11,5 @@ export NANO_SEEDS_B=8 NANO_SEEDS_AE=0 NANO_SEEDS_D=0 NANO_SEEDS_C=0
 export NANO_RESULTS="$PWD/results_transfer_grid"
 export PYTHONUNBUFFERED=1
 echo "=== GRID A: provenance at scale (3 regimes x 8 seeds, NIH+PadChest) ==="
-CUDA_VISIBLE_DEVICES="" python run_all_gpus.py --run
+CUDA_VISIBLE_DEVICES="" python scripts/train/run_all_gpus.py --run
 echo "=== GRID A DONE ==="

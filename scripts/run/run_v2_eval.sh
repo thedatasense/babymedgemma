@@ -17,5 +17,5 @@ export PYTHONUNBUFFERED=1
 
 if [ ! -f "$NANO_CKPT" ]; then echo "NO CHECKPOINT at $NANO_CKPT"; exit 1; fi
 echo "=== EVALUATING TRANSFER (val / ood_mimic / ood_vindr) ==="
-CUDA_VISIBLE_DEVICES=0 OMP_NUM_THREADS=6 python eval_transfer.py
+CUDA_VISIBLE_DEVICES=0 OMP_NUM_THREADS=6 python scripts/analysis/eval_transfer.py
 echo "=== EVAL DONE ==="

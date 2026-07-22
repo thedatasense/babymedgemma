@@ -30,7 +30,7 @@ echo "=== GRID A-heldout: train on 24 templates, score only the 24 unseen ==="
 env "${COMMON[@]}" NANO_PARA_HELDOUT=1 \
     NANO_SEEDS_B=6 NANO_SEEDS_AE=0 NANO_SEEDS_D=0 NANO_SEEDS_C=0 \
     NANO_RESULTS="$PWD/results_transfer_heldout" \
-    CUDA_VISIBLE_DEVICES="" python run_all_gpus.py --run
+    CUDA_VISIBLE_DEVICES="" python scripts/train/run_all_gpus.py --run
 echo "=== GRID A-heldout DONE ==="
 
 # ---- C: rank-1 causal patching --------------------------------------------
@@ -39,7 +39,7 @@ for seed in 0 1 2; do
   for regime in augmented adversarial; do
     gpu=$(( (seed * 2 + $([ "$regime" = augmented ] && echo 0 || echo 1)) % 8 ))
     env "${COMMON[@]}" CUDA_VISIBLE_DEVICES=$gpu \
-      python experiment_e.py --arch gemma --grounding-token --regime $regime --seed $seed \
+      python scripts/experiments/experiment_e.py --arch gemma --grounding-token --regime $regime --seed $seed \
         --steps 12000 --max-clusters 60 \
         --out "$PWD/results_transfer_patch/${regime}_s${seed}" &
   done
@@ -52,5 +52,5 @@ echo "=== DISPERSION / THRESHOLD ROBUSTNESS on the scaled grid ==="
 env "${COMMON[@]}" CUDA_VISIBLE_DEVICES=0 \
     NANO_DISP_RESULTS="$PWD/results_transfer_grid/B" NANO_DISP_SEEDS=8 \
     NANO_DISP_OUT="$PWD/results_transfer_grid/dispersion.json" \
-    python flip_threshold_robustness.py
+    python scripts/experiments/flip_threshold_robustness.py
 echo "=== ALL EXPERIMENTS DONE ==="

@@ -104,8 +104,8 @@ The five experiments isolate the origin in one line each:
 A establishes the cause; B and C localize and confirm the mechanism; D and E rule
 out the two obvious alternatives. A, C and the threshold checks were re-run on the
 scaled model described above; **B, D and E are carried over from the earlier
-1,841-question probe** (published at `probe-1841/` on Hugging Face) and are
-reported as that model's results. Two corroborations (an unsupervised feature and
+1,841-question probe** (retired; its results remain under `results_gemma/` and the
+scripts are in `scripts/legacy/`). Two corroborations (an unsupervised feature and
 a lens) and a zero-shot transfer test close it out. All figures are baby-Gemma
 over 8 seeds (`results_transfer_grid/`).
 
@@ -299,70 +299,39 @@ early-to-middle band, and set by the training-phrasing distribution.
 
 ## Layout
 
-The modules are flat by design: scripts resolve data and cache paths relative to the
-repository root, and the Hugging Face wrapper is loaded by `trust_remote_code`, so the
-import namespace is kept simple rather than nested.
-
-**Core library** (imported by everything else)
-
-```
-vision.py            frozen MedSigLIP-448 wrapper (896px, 4096 -> 256 pooled tokens)
-data_index.py        the VQA index (NANO_INDEX selects which one)
-dataset.py           tokenizer selector, the three training regimes, paraphrase clusters
-gemma_tokenizer.py   MedGemma SentencePiece pruned to the corpus (141 pieces)
-templates.py         48-paraphrase bank (meaning-preserving; negation kept separate)
-gemma_model.py       baby-Gemma: Gemma-3 decoder + frozen MedSigLIP, prefix fusion, grounding token
-model.py             retired hand-rolled nano probe (kept for reference)
-metrics.py           flip rate, accuracy, grounding gap, layer dispersion
-train.py             training loop + train_model() (--arch gemma|nano, --grounding-token)
-```
-
-**Data preparation** (`scripts/data` role)
+An installable package (`pip install -e .`) under `src/babygemma/`, with entry-point
+scripts grouped by role under `scripts/`. The scripts import the package rather than
+their siblings, and resolve data paths through `babygemma.paths`, so nothing depends on
+where a file sits in the tree.
 
 ```
-download_nih.py         fetch the full ChestX-ray14 (112k images) from Hugging Face
-build_transfer_index.py train NIH+PadChest, hold out MIMIC+VinDr as unseen hospitals
-build_scaled_index.py   NIH + MIMIC/PadChest, per-finding balanced
-precompute_features.py  cache the 896 patch tokens once
-precompute_pooled.py    cache MedSigLIP's attention-pooled embedding (the grounding token)
-encode_shard.py         shard both encodings across GPUs; merge_shards.py folds them back
-```
+src/babygemma/            the importable library
+  paths.py                repository-root-anchored cache / data / results paths
+  vision.py               frozen MedSigLIP-448 (896px, 4096 -> 256 pooled tokens)
+  data_index.py           the VQA index (NANO_INDEX selects which one)
+  nih.py                  NIH ChestX-ray14 question and label builders
+  dataset.py              the three training regimes + paraphrase clusters
+  tokenizer.py            MedGemma SentencePiece pruned to the corpus
+  templates.py            48-paraphrase bank (meaning-preserving; negation separate)
+  gemma_model.py          BabyGemmaVLM: Gemma-3 decoder + prefix fusion + grounding token
+  encoders.py             MedSigLIP attention-pooled embedding (the grounding token)
+  metrics.py              flip rate, accuracy, grounding gap, dispersion
+  training.py             train_model()
 
-**Experiments** (A to E, plus the two corroborations)
-
-```
-run_all_gpus.py         A-E grid scheduler across GPUs
-experiment_a.py         B. divergence trajectory
-experiment_e.py         C. causal rank-1 patching
-sae.py                  sparse autoencoder on the residual stream (+ PCA baseline)
-jlens.py                Jacobian lens
-nih_demo.py             the original NIH transfer probe + NIH question builders
-scripts/run/            shell drivers that chain the above into full runs
-```
-
-**Evaluation and analysis**
-
-```
-eval_transfer.py             accuracy + AUC + text-only floor per split
-eval_scaled.py               held-out evaluation of the scaled model
-nih_auc_analysis.py          the AUC-vs-accuracy diagnosis (blind vs seeing)
-verify_grounding.py          grounding-token ablation (real / zeroed / shuffled)
-condition_activation.py      read the hidden state three ways (yes-no / condition / oracle)
-flip_threshold_robustness.py threshold sweep + threshold-free dispersion ratio
-diag_ood.py, diag_readout.py the encoder-vs-readout diagnosis
-figures.py                   regenerate figures/ from the result JSON
-```
-
-**Packaging for Hugging Face**
-
-```
-modeling_babymedgemma.py     transformers wrapper for the probe-1841 variant
-modeling_babymedgemma_v2.py  transformers wrapper for the scaled grounded model (self-contained)
-convert_to_hf.py             package the probe checkpoint
-convert_v2_to_hf.py          package the scaled checkpoint
+scripts/
+  data/          download_nih, build_transfer_index, build_scaled_index,
+                 precompute_features, precompute_pooled, encode_shard, merge_shards
+  train/         train.py (CLI), run_all_gpus.py (grid scheduler)
+  experiments/   experiment_a (divergence), experiment_e (rank-1 patching), sae, jlens,
+                 flip_threshold_robustness
+  analysis/      eval_transfer, eval_scaled
+  hf/            modeling_babymedgemma.py (self-contained wrapper), convert_to_hf.py
+  run/           shell drivers that chain the above into full runs
+  legacy/        scripts of the retired 1,841-question probe (results under results_gemma/)
 ```
 
 Results directories are documented in [`RESULTS.md`](RESULTS.md). Heavy artifacts
+(`**/model.pt`, `cache/`) are on Hugging Face, not in git.
 (`**/model.pt`, `cache/`) are on Hugging Face, not in git.
 
 
@@ -372,69 +341,60 @@ The model checkpoints (`**/model.pt`, ~4 GB) and the MedSigLIP feature cache
 
 ## Load with transformers
 
-The trained probe is packaged as a custom `transformers` model (loadable via
-`trust_remote_code`); `modeling_babymedgemma.py` holds the config and model
-classes.
-
-Two variants are published. The **repo root** is the scaled grounded model that
-transfers to unseen hospitals; **`probe-1841/`** is the controlled probe behind
-experiments A to E above.
+Packaged as a custom `transformers` model, loadable with `trust_remote_code`:
 
 ```python
 import torch
 from transformers import AutoModel
 from PIL import Image
 
-# scaled grounded model (default)
 model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
 input_ids, ans_pos = model.encode_question("is there pleural effusion?")
 vision_features, ground = model.encode_images([Image.open("cxr.png").convert("RGB")])
 logits = model(input_ids=input_ids, vision_features=vision_features,
                ground=ground, ans_pos=ans_pos).logits
 print(model.config.id2label[int(logits.argmax(-1))])   # "yes" or "no"
-
-# the dissertation probe (no grounding token, word-level vocabulary)
-probe = AutoModel.from_pretrained("saillab/babymedgemma", subfolder="probe-1841",
-                                  trust_remote_code=True).eval()
 ```
 
-The two are **not interchangeable**: the A-E numbers reproduce only with
-`probe-1841/`, whose training distribution they describe. The root model uses
-MedGemma's own SentencePiece tokenizer pruned to 141 pieces (0.4% of the parameters)
-rather than a hand-rolled word vocabulary, so unseen words decompose into pieces
-instead of silently becoming padding. HF `feature_cache/` and `checkpoints/` belong
-to the probe variant.
+`encode_images` needs gated access to `google/medsiglip-448`. The model uses MedGemma's
+own SentencePiece tokenizer pruned to 141 pieces, so an unseen word decomposes into
+pieces rather than silently becoming padding.
 
 ## Reproduce
 
 ```bash
-# 0. install: torch, transformers>=4.57 (Gemma-3), Pillow, numpy, scikit-learn.
-#    Needs gated access to google/medsiglip-448.
+# 0. install the package (editable) + dependencies. Needs gated google/medsiglip-448.
+pip install -e .
 
-# 1. features: download the cache from HF into cache/, or recompute (~10 min / GPU)
-huggingface-cli download saillab/babymedgemma feature_cache/medsiglip_feats.pt \
-  --local-dir . && mv feature_cache/medsiglip_feats.pt cache/
-# or:  CUDA_VISIBLE_DEVICES=0 python precompute_features.py
+# 1. data: download NIH ChestX-ray14, build the transfer index, cache both encodings
+python scripts/data/download_nih.py
+python scripts/data/build_transfer_index.py                    # -> data/index_transfer.json
+python scripts/data/precompute_features.py                     # 896 patch tokens
+python scripts/data/precompute_pooled.py                       # attention-pooled grounding token
 
-# 2. one run
-CUDA_VISIBLE_DEVICES=0 python train.py --arch gemma --regime augmented --seed 0
+# 2. one run (env vars select the index, caches, and tokenizer; see scripts/run/)
+NANO_INDEX=$PWD/data/index_transfer.json NANO_GEMMA_TOK=1 NANO_MAXLEN=20 \
+NANO_FEATS=$PWD/cache/transfer_feats.pt NANO_POOLED=$PWD/cache/transfer_pooled.pt \
+  CUDA_VISIBLE_DEVICES=0 python scripts/train/train.py --regime augmented --seed 0 --grounding-token
 
-# 3. the full A-E grid across 8 GPUs
-NANO_ARCH=gemma NANO_LR=5e-4 python run_all_gpus.py --run
+# 3. the full provenance grid across 8 GPUs, and the follow-on experiments
+bash scripts/run/run_gridA.sh
+bash scripts/run/run_all_experiments.sh
 ```
 
 Each framework letter maps to a grid tag and a result file:
 
-| Framework | Script / grid tag | Result file |
+| Framework | Script | Result file (latest model) |
 |---|---|---|
-| A Data provenance | `run_all_gpus.py` tag B | `results_gemma/B/*/result.json` |
-| B Divergence | tag A (`experiment_a.py`) | `results_gemma/A/*/experiment_a.json` |
-| C Causal patching | tag E (`experiment_e.py`) | `results_gemma/E/*/experiment_e.json` |
-| D Architecture | tag C | `results_gemma/C/*/result.json` |
-| E Grounding | tag D | `results_gemma/D/*/result.json` |
-| SAE | `sae.py --arch gemma` | `results_gemma/sae_gemma/sae.json` |
-| Jacobian lens | `jlens.py --arch gemma` | `results_gemma/jlens_gemma/jlens.json` |
-| NIH transfer | `nih_demo.py --arch gemma` | `results/nih_demo/nih_demo.json` |
+| A Data provenance | `run_all_gpus.py` tag B | `results_transfer_grid/B/*/result.json` |
+| A' Held-out phrasing | `run_all_gpus.py` (NANO_PARA_HELDOUT) | `results_transfer_heldout/B/*/result.json` |
+| C Causal patching | `experiment_e.py` | `results_transfer_patch/*/experiment_e.json` |
+| Threshold robustness | `flip_threshold_robustness.py` | `results_transfer_grid/dispersion.json` |
+| Transfer to unseen hospitals | `eval_transfer.py` | `results_transfer/eval_transfer.json` |
+| SAE, Jacobian lens | `sae.py`, `jlens.py` | `results_transfer/{sae,jlens}/*.json` |
+
+The 1,841-question probe's experiments B, D and E, and its NIH diagnosis, are under
+`results_gemma/` with their scripts in `scripts/legacy/`.
 
 ## Citation
 

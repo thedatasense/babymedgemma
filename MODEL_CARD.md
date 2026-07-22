@@ -29,22 +29,7 @@ sensitivity in medical vision-language models originates*.
 > **Scope.** A research probe, **not a clinical model**. It answers binary presence
 > questions about 14 chest findings. Not a medical device; not for clinical use.
 
-## Two variants
-
-| | default (this repo root) | `probe-1841/` |
-|---|---|---|
-| Purpose | grounded model that **transfers to unseen hospitals** | the **controlled probe** behind the dissertation's causal experiments |
-| Training data | 107k per-finding-balanced questions (NIH + PadChest) | 1,841 questions (MIMIC-CXR + PadChest) |
-| Tokenizer | MedGemma SentencePiece, pruned to 141 pieces | word-level, 734 words |
-| Paraphrases | 48 templates across 4 phenomena | 4.8 generated per question |
-| Grounding token | yes (MedSigLIP pooled embedding) | no |
-
-The dissertation's Section 5.5 now describes the **default** model. `probe-1841/` is
-kept for reproducing the earlier published figures (augmentation lever 29.5% -> 9.5%)
-and the experiments not re-run at scale (divergence trajectory, decoder-depth sweep,
-vision-dropout grounding sweep).
-
-## What the default model does
+## What it does
 
 Trained on NIH + PadChest, evaluated on **MIMIC and VinDr held out entirely** (no
 image, and no hospital, seen in training). Every split is balanced per finding, so a
@@ -108,22 +93,16 @@ logits = model(input_ids=input_ids, vision_features=vision_features,
 print(model.config.id2label[int(logits.argmax(-1))])      # "yes" or "no"
 ```
 
-The dissertation probe loads the same way with `subfolder="probe-1841"` (it takes no
-`ground` argument). `encode_images` needs gated access to `google/medsiglip-448`.
-`feature_cache/` and `checkpoints/` in this repo belong to the **probe** variant.
+`encode_images` needs gated access to `google/medsiglip-448`.
 
 ## Repository structure
 
 ```
-config.json  model.safetensors  modeling_babymedgemma.py   scaled grounded model (default)
-probe-1841/                                                 the 1,841-question dissertation probe
-feature_cache/medsiglip_feats.pt                            896-pixel MedSigLIP cache (probe variant)
-checkpoints/{B,C,D}/                                        per-run BabyGemmaVLM state_dicts (probe variant)
+config.json  model.safetensors  modeling_babymedgemma.py   the model + self-contained wrapper
 ```
 
 Training and analysis code, and the exact scripts that produced every number here, are on
-GitHub: [thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma). Load
-either model with the same call; the probe needs `subfolder="probe-1841"`.
+GitHub: [thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma).
 
 ## Citation
 

@@ -30,3 +30,6 @@ hf_export_v2/
 # scratch scripts and chain drivers
 _*.py
 _*.sh
+
+*.egg-info/
+build/
