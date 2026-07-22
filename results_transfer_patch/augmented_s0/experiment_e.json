@@ -1,0 +1,52 @@
+{
+  "regime": "augmented",
+  "seed": 0,
+  "steps": 12000,
+  "depth": 6,
+  "early_stop_step": 9000,
+  "val_acc": 0.7527792482795129,
+  "vision_dropout": 0.0,
+  "use_ground": true,
+  "n_train": 4228112,
+  "n_eval_clusters": 2000,
+  "trainable_params": 14078592,
+  "accuracy": 0.7495102040816326,
+  "accuracy_vision_ablated": 0.5065,
+  "grounding_gap": 0.24301020408163265,
+  "flip_rate": 0.041,
+  "n_flip_targets": 60,
+  "n_nonflip_controls": 60,
+  "recovery_rank1_by_layer": [
+    0.8333333333333334,
+    0.9666666666666667,
+    1.0,
+    1.0,
+    1.0,
+    0.7166666666666667
+  ],
+  "control_rank1_by_layer": [
+    0.016666666666666666,
+    0.0,
+    0.016666666666666666,
+    0.016666666666666666,
+    0.0,
+    0.1
+  ],
+  "net_rank1_by_layer": [
+    0.8166666666666667,
+    0.9666666666666667,
+    0.9833333333333333,
+    0.9833333333333333,
+    1.0,
+    0.6166666666666667
+  ],
+  "nonflip_disruption_by_layer": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "locus_depth_net30": 0
+}

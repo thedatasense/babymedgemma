@@ -299,33 +299,72 @@ early-to-middle band, and set by the training-phrasing distribution.
 
 ## Layout
 
+The modules are flat by design: scripts resolve data and cache paths relative to the
+repository root, and the Hugging Face wrapper is loaded by `trust_remote_code`, so the
+import namespace is kept simple rather than nested.
+
+**Core library** (imported by everything else)
+
 ```
-gemma_model.py          baby-Gemma: Gemma-3 decoder + frozen MedSigLIP, prefix fusion
-model.py                retired hand-rolled nano probe (kept for reference)
-vision.py               frozen MedSigLIP wrapper (896px, 4096 -> 256 pooled tokens)
-precompute_features.py  cache the frozen encoder features once
-data_index.py           MIMIC + PadChest binary VQA with register-tagged paraphrases
-dataset.py              the three training regimes (canonical / augmented / adversarial)
-train.py                training loop (--arch gemma|nano), validation early stopping
+vision.py            frozen MedSigLIP-448 wrapper (896px, 4096 -> 256 pooled tokens)
+data_index.py        the VQA index (NANO_INDEX selects which one)
+dataset.py           tokenizer selector, the three training regimes, paraphrase clusters
+gemma_tokenizer.py   MedGemma SentencePiece pruned to the corpus (141 pieces)
+templates.py         48-paraphrase bank (meaning-preserving; negation kept separate)
+gemma_model.py       baby-Gemma: Gemma-3 decoder + frozen MedSigLIP, prefix fusion, grounding token
+model.py             retired hand-rolled nano probe (kept for reference)
+metrics.py           flip rate, accuracy, grounding gap, layer dispersion
+train.py             training loop + train_model() (--arch gemma|nano, --grounding-token)
+```
+
+**Data preparation** (`scripts/data` role)
+
+```
+download_nih.py         fetch the full ChestX-ray14 (112k images) from Hugging Face
+build_transfer_index.py train NIH+PadChest, hold out MIMIC+VinDr as unseen hospitals
+build_scaled_index.py   NIH + MIMIC/PadChest, per-finding balanced
+precompute_features.py  cache the 896 patch tokens once
+precompute_pooled.py    cache MedSigLIP's attention-pooled embedding (the grounding token)
+encode_shard.py         shard both encodings across GPUs; merge_shards.py folds them back
+```
+
+**Experiments** (A to E, plus the two corroborations)
+
+```
+run_all_gpus.py         A-E grid scheduler across GPUs
 experiment_a.py         B. divergence trajectory
 experiment_e.py         C. causal rank-1 patching
 sae.py                  sparse autoencoder on the residual stream (+ PCA baseline)
 jlens.py                Jacobian lens
-nih_demo.py             zero-shot NIH transfer
-figures.py              regenerate the figures/ from the result JSONs
-run_all_gpus.py         A-E grid scheduler across GPUs
-results_gemma/          baby-Gemma results (compact JSON here; model.pt on HF)
-
-templates.py            48-paraphrase bank (meaning-preserving; negation kept separate)
-gemma_tokenizer.py      MedGemma SentencePiece pruned to the corpus (141 pieces)
-build_transfer_index.py train NIH+PadChest, hold out MIMIC+VinDr as unseen hospitals
-encode_shard.py         shard the 896 patch + 448 pooled encoding across GPUs
-eval_transfer.py        accuracy + AUC + text-only floor per split
-nih_auc_analysis.py     the AUC-vs-accuracy diagnosis (blind vs seeing)
-flip_threshold_robustness.py  threshold sweep + threshold-free dispersion ratio
-results_transfer/       scaled-model results
-docs/                   design doc + 4B-replication plan
+nih_demo.py             the original NIH transfer probe + NIH question builders
+scripts/run/            shell drivers that chain the above into full runs
 ```
+
+**Evaluation and analysis**
+
+```
+eval_transfer.py             accuracy + AUC + text-only floor per split
+eval_scaled.py               held-out evaluation of the scaled model
+nih_auc_analysis.py          the AUC-vs-accuracy diagnosis (blind vs seeing)
+verify_grounding.py          grounding-token ablation (real / zeroed / shuffled)
+condition_activation.py      read the hidden state three ways (yes-no / condition / oracle)
+flip_threshold_robustness.py threshold sweep + threshold-free dispersion ratio
+diag_ood.py, diag_readout.py the encoder-vs-readout diagnosis
+figures.py                   regenerate figures/ from the result JSON
+```
+
+**Packaging for Hugging Face**
+
+```
+modeling_babymedgemma.py     transformers wrapper for the probe-1841 variant
+modeling_babymedgemma_v2.py  transformers wrapper for the scaled grounded model (self-contained)
+convert_to_hf.py             package the probe checkpoint
+convert_v2_to_hf.py          package the scaled checkpoint
+```
+
+Results directories are documented in [`RESULTS.md`](RESULTS.md). Heavy artifacts
+(`**/model.pt`, `cache/`) are on Hugging Face, not in git.
+
 
 The model checkpoints (`**/model.pt`, ~4 GB) and the MedSigLIP feature cache
 (`cache/medsiglip_feats.pt`, ~3 GB) are on Hugging Face, not in git:

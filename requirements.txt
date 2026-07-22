@@ -1,0 +1,11 @@
+# baby-MedGemma. Python 3.10+.
+# The vision encoder google/medsiglip-448 is gated: request access on Hugging Face
+# and `huggingface-cli login` before running anything that encodes images.
+torch>=2.3
+transformers>=4.57          # Gemma-3 text stack + MedSigLIP
+huggingface_hub>=0.24
+Pillow>=10.0
+numpy>=1.24
+scipy>=1.10
+scikit-learn>=1.3
+matplotlib>=3.7             # figures only
