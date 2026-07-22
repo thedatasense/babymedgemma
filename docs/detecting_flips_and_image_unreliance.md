@@ -262,9 +262,12 @@ Population interaction (does wording modulate reliance at all), over 3 held-out 
 | case-specific share | 82 percent | idiosyncratic to the case, not finding-level |
 
 Individual route-drop event (raw V, null-locked thresholds, all draws must agree,
-patient-split test set): zero observed in every seed, 0 of 345 pooled test patients. Because
-a bootstrap of zero events returns a degenerate [0, 0], we report a Clopper-Pearson 97.5th
-upper bound with the patient as the unit: 2.9 to 3.5 percent per seed, near 3 percent. The
+patient-split test set): zero observed in every seed, 0 over 345 patient-seed evaluations.
+The case pool is built once and scored against the three checkpoints, so the seeds share
+patients; the 345 is the sum of the per-seed test counts (105, 125, 115) and covers 225
+unique patient IDs. Because a bootstrap of zero events returns a degenerate [0, 0], we
+report a Clopper-Pearson 97.5th upper bound with the patient as the unit: 2.9 to 3.5 percent
+per seed, near 3 percent. The
 reason the event does not fire is not that grounding and unreliance fail to co-occur; it is
 that confidently grounded never happens. The same-versus-same null |V| (no true finding
 change) reaches as high as the real V (null 97.5th percentile 4.9 to 7.2; real |V| maxes at
@@ -282,7 +285,7 @@ Verdict.
 |---|---|
 | prompt-dependent reliance interaction exists (population) | supported (corr 0.56, 82 percent case-specific, 3 seeds) |
 | a stable answer can hide small route variation | real but small (within-case V sd about 0.22) |
-| individual grounded-to-unreliant route-drops occur at a measurable rate | no (0 of 345 test patients, patient-level upper bound near 3 percent) |
+| individual grounded-to-unreliant route-drops occur at a measurable rate | no (0 over 345 patient-seed evaluations, 225 unique patients, patient-level upper bound near 3 percent) |
 | a per-case single-pass route-drop monitor is warranted | no; the event has about zero detectable prevalence |
 
 This is why the method is counterfactual and not causal: observationally matched

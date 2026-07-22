@@ -136,7 +136,7 @@ def main():
         p = by_name[n]
         return feats["feats"][feats["index"][p]].float(), pc["pooled"][pc["index"][p]].float()
 
-    per_seed, records = [], []
+    per_seed, records, test_pat_sets = [], [], []
     for seed in SEEDS:
         m = BabyGemmaVLM(vocab_size=len(tok), dim=384, depth=6, max_len=tok.max_len,
                          yes_id=tok.stoi["yes"], no_id=tok.stoi["no"],
@@ -202,6 +202,7 @@ def main():
         # observed count and a Clopper-Pearson 95% upper bound with patients as the unit.
         from scipy import stats as _st
         n_ev = int(route[test_i].sum()); n_tp = int(len(np.unique(pats[test_i])))
+        test_pat_sets.append(set(pats[test_i].tolist()))     # for the union across seeds
         upper = (float(1 - 0.025 ** (1 / n_tp)) if n_ev == 0
                  else float(_st.beta.ppf(0.975, n_ev + 1, n_tp - n_ev)))
         r = {"seed": seed, "n_cases": len(cases), "n_stable": len(stab),
@@ -219,11 +220,18 @@ def main():
 
     agg = {k: float(np.mean([s[k] for s in per_seed]))
            for k in ["sigma2_route", "corr", "case_share", "route_drop_rate_test"]}
+    agg["route_drops_observed_total"] = int(sum(s["route_drops_observed"] for s in per_seed))
+    # the case pool is built once, so seeds share patients; report both the summed
+    # patient-seed evaluations and the unique patient IDs across the three test sets.
+    agg["patient_seed_evaluations_total"] = int(sum(len(s) for s in test_pat_sets))
+    agg["unique_test_patients"] = int(len(set().union(*test_pat_sets)))
     print(f"\n=== pooled ({len(SEEDS)} held-out seeds) ===")
     print(f"  interaction: sig_route {agg['sigma2_route']:+.4f}  corr {agg['corr']:+.2f}  "
           f"case_share {agg['case_share']:.0%}")
-    print(f"  raw-V grounded->unreliant route-drop (locked deltas, patient-clustered): "
-          f"{agg['route_drop_rate_test']:.3f}")
+    print(f"  raw-V grounded->unreliant route-drop (locked deltas): "
+          f"{agg['route_drops_observed_total']} events over "
+          f"{agg['patient_seed_evaluations_total']} patient-seed evaluations "
+          f"({agg['unique_test_patients']} unique patients)")
     json.dump({"per_seed": per_seed, "pooled": agg}, open(OUT, "w"), indent=2)
     json.dump(records, open(RECS, "w"))
     print(f"wrote {OUT} and full-component records to {RECS}")

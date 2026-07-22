@@ -58,7 +58,8 @@
     "case_share": 0.8171156146529653,
     "route_drop_rate_test": 0.0,
     "route_drops_observed_total": 0,
-    "n_test_patients_total": 345
+    "patient_seed_evaluations_total": 345,
+    "unique_test_patients": 225
   },
-  "note": "y-label direction restored in draws_V/null_V; dev/test split by patient; zero-event CIs reported as Clopper-Pearson 97.5% upper bounds. Recomputed from saved deterministic margins in route_flip_records.json."
+  "note": "y-label direction restored in draws_V/null_V; dev/test split by patient; zero-event CIs reported as Clopper-Pearson 97.5% upper bounds. The case pool is built once, so the three seeds share patients: patient_seed_evaluations_total is the summed per-seed count and unique_test_patients is the union. Recomputed from the saved deterministic margins in route_flip_records.json."
 }
