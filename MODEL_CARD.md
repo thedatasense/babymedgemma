@@ -25,6 +25,7 @@ sensitivity in medical vision-language models originates*.
 
 - Code and the full experiment write-up: **[github.com/thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma)**
 - Interactive write-up: **[bineshkumar.me/phd-thesis/causality](https://bineshkumar.me/phd-thesis/causality/)**
+- Live single-pass flip-detector demo: **[bineshkumar.me/phd-thesis/explorer/#margin-demo](https://bineshkumar.me/phd-thesis/explorer/#margin-demo)**
 
 > **Scope.** A research probe, **not a clinical model**. It answers binary presence
 > questions about 14 chest findings. Not a medical device; not for clinical use.
@@ -76,6 +77,30 @@ below chance)**, most likely a label-definition mismatch, and should not be trus
 Accuracy alone cannot tell a seeing model from a blind one here: a blind model, a
 model given a *shuffled* grounding token, and a genuinely seeing model all score
 ~0.50 accuracy while their AUCs are 0.500 / 0.506 / 0.604. Report AUC.
+
+### The discarded margin is a single-pass flip detector
+
+Because the answer is the sign of the yes-minus-no margin and a flip is a sign change,
+a margin near zero marks a paraphrase-unstable answer. The absolute margin of one
+forward pass therefore ranks flip-prone questions at no cost beyond the answer itself,
+and it beats the detectors that cost more (`scripts/analysis/detect.py`):
+
+| detector | passes | in-distribution | MIMIC | VinDr |
+|---|---|---|---|---|
+| **absolute margin** | **1** | **0.923** | **0.974** | **0.974** |
+| paraphrase self-consistency | k | 0.709 | 0.786 | 0.624 |
+| hidden-state probe | 1 + fit | 0.826 | 0.838 | 0.801 |
+
+The other failure, an answer that ignores the image, has **no** single-pass signal: the
+margin is at chance for it (0.470 to 0.519), because a confident blind answer looks
+exactly like a confident grounded one. Only a second pass that swaps in another
+patient's image detects it (0.827 to 0.907). A finer question, whether a stable answer
+quietly changes how much it uses the image from one phrasing to another, is real at the
+population level (cross-draw covariance 0.062, between-draw correlation 0.56, 82%
+case-specific over three seeds) but **not identifiable per case** (zero grounded-to-unreliant
+transitions over 345 patient-seed evaluations, patient-level upper bound near 3%). Image
+reliance is a population property here, not a per-prediction label. Try it in the
+**[live margin-gate demo](https://bineshkumar.me/phd-thesis/explorer/#margin-demo)**.
 
 ## Load
 
