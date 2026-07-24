@@ -76,7 +76,7 @@ below chance)**, most likely a label-definition mismatch, and should not be trus
 
 Accuracy alone cannot tell a seeing model from a blind one here: a blind model, a
 model given a *shuffled* grounding token, and a genuinely seeing model all score
-~0.50 accuracy while their AUCs are 0.500 / 0.506 / 0.604. Report AUC.
+~0.50 accuracy while their AUCs are 0.500 / 0.502 / 0.604. Report AUC.
 
 ### The discarded margin is a single-pass flip detector
 

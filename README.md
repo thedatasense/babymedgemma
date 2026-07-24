@@ -229,8 +229,8 @@ which is the metric the field mostly uses.
 The in-distribution flip-rate results are *not* affected by this. A threshold sweep
 holds the augmented < canonical ordering at every non-degenerate offset, and a
 threshold-free statistic (within-cluster margin dispersion over between-cluster
-dispersion) reproduces it at maximal effect size: augmented 0.073, canonical 0.284,
-adversarial 0.312, p = 1.5e-6, Cliff's delta = 1.00.
+dispersion) reproduces it at maximal effect size: augmented 0.023, canonical 0.498,
+adversarial 1.362, Cliff's delta = -1.00 against augmented (p = 1.6e-4).
 
 ## Scaling up: a grounded model that transfers (`build_transfer_index.py`)
 
@@ -404,6 +404,7 @@ The 1,841-question probe's experiments B, D and E, and its NIH diagnosis, are un
 
 ## License and data
 
-Code is released for research use. The probe is trained on MIMIC-CXR and
-PadChest; use of the derived features and checkpoints is subject to those
-datasets' data-use agreements. Not a medical device and not for clinical use.
+Code is released for research use. The probe is trained on NIH ChestX-ray14 and
+PadChest, with MIMIC-CXR and VinDr-CXR held out entirely for transfer evaluation;
+use of the derived features and checkpoints is subject to those datasets' data-use
+agreements. Not a medical device and not for clinical use.
