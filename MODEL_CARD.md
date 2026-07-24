@@ -16,14 +16,14 @@ base_model:
 pipeline_tag: visual-question-answering
 ---
 
-# baby-MedGemma
+# FlipLens
 
 A small, **MedGemma-faithful** chest-X-ray model: a frozen `google/medsiglip-448`
 encoder run at 896 pixels feeding a compact **Gemma-3** decoder, with the yes/no
 answer read from the tied language-model head. Built to study *where paraphrase
 sensitivity in medical vision-language models originates*.
 
-- Code and the full experiment write-up: **[github.com/thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma)**
+- Code and the full experiment write-up: **[github.com/thedatasense/FlipLens](https://github.com/thedatasense/FlipLens)**
 - Interactive write-up: **[bineshkumar.me/phd-thesis/causality](https://bineshkumar.me/phd-thesis/causality/)**
 - Live single-pass flip-detector demo: **[bineshkumar.me/phd-thesis/explorer/#margin-demo](https://bineshkumar.me/phd-thesis/explorer/#margin-demo)**
 
@@ -45,8 +45,8 @@ text-only model scores exactly 0.500 and all accuracy above that is visual.
 ### What it establishes about paraphrase sensitivity
 
 Training the same architecture under three phrasing distributions, changing nothing
-else (8 seeds each; text-only accuracy 50.0-50.3% in all three, so none can exploit
-an answer prior):
+else (8 seeds each; text-only accuracy within one point of chance in all three,
+49.4-50.7% across seeds, so none can exploit an answer prior):
 
 | training regime | flip rate | scored on **unseen** phrasings | accuracy |
 |---|---|---|---|
@@ -109,7 +109,7 @@ import torch
 from transformers import AutoModel
 from PIL import Image
 
-model = AutoModel.from_pretrained("saillab/babymedgemma", trust_remote_code=True).eval()
+model = AutoModel.from_pretrained("saillab/FlipLens", trust_remote_code=True).eval()
 
 input_ids, ans_pos = model.encode_question("is there pleural effusion?")
 vision_features, ground = model.encode_images([Image.open("cxr.png").convert("RGB")])
@@ -127,7 +127,7 @@ config.json  model.safetensors  modeling_babymedgemma.py   the model + self-cont
 ```
 
 Training and analysis code, and the exact scripts that produced every number here, are on
-GitHub: [thedatasense/babymedgemma](https://github.com/thedatasense/babymedgemma).
+GitHub: [thedatasense/FlipLens](https://github.com/thedatasense/FlipLens).
 
 ## Citation
 
